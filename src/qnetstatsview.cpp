@@ -147,18 +147,19 @@ void QNetStatsView::updateStats() {
 		const qint64 elapsedNs = mSampleClock.nsecsElapsed();
 		if (elapsedNs <= 0)
 			return;
-		const double perSecond = 1000000000.0 / double(elapsedNs);
-		if (++mSpeedBufferPtr == SPEED_BUFFER_SIZE)
-			mSpeedBufferPtr = 0;
+		const double elapsedSeconds = double(elapsedNs) / 1000000000.0;
+		if (++mDeltaBufferPtr == SPEED_BUFFER_SIZE)
+			mDeltaBufferPtr = 0;
 		if (++mSpeedHistoryPtr == HISTORY_SIZE)
 			mSpeedHistoryPtr = 0;
 
-		mSpeedBufferTx[mSpeedBufferPtr] = (btx - mBTx) * perSecond;
-		mSpeedBufferRx[mSpeedBufferPtr] = (brx - mBRx) * perSecond;
-		mSpeedBufferPTx[mSpeedBufferPtr] = (ptx - mPTx) * perSecond;
-		mSpeedBufferPRx[mSpeedBufferPtr] = (prx - mPRx) * perSecond;
-		mSpeedHistoryRx[mSpeedHistoryPtr] = calcSpeed(mSpeedBufferRx);
-		mSpeedHistoryTx[mSpeedHistoryPtr] = calcSpeed(mSpeedBufferTx);
+		mSampleSeconds[mDeltaBufferPtr] = elapsedSeconds;
+		mDeltaBufferTx[mDeltaBufferPtr] = btx - mBTx;
+		mDeltaBufferRx[mDeltaBufferPtr] = brx - mBRx;
+		mDeltaBufferPTx[mDeltaBufferPtr] = ptx - mPTx;
+		mDeltaBufferPRx[mDeltaBufferPtr] = prx - mPRx;
+		mSpeedHistoryRx[mSpeedHistoryPtr] = calcSpeed(mDeltaBufferRx);
+		mSpeedHistoryTx[mSpeedHistoryPtr] = calcSpeed(mDeltaBufferTx);
 		calcMaxSpeed();
 	}
 	mSampleClock.start();
@@ -221,10 +222,12 @@ bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &
 
 void QNetStatsView::resetSampling() {
 	mSampleClock.invalidate();
-	std::fill_n(mSpeedBufferRx, SPEED_BUFFER_SIZE, 0.0);
-	std::fill_n(mSpeedBufferTx, SPEED_BUFFER_SIZE, 0.0);
-	std::fill_n(mSpeedBufferPRx, SPEED_BUFFER_SIZE, 0.0);
-	std::fill_n(mSpeedBufferPTx, SPEED_BUFFER_SIZE, 0.0);
+	mDeltaBufferPtr = 0;
+	std::fill_n(mSampleSeconds, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mDeltaBufferRx, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mDeltaBufferTx, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mDeltaBufferPRx, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mDeltaBufferPTx, SPEED_BUFFER_SIZE, 0.0);
 	mSpeedHistoryRx[mSpeedHistoryPtr] = 0.0;
 	mSpeedHistoryTx[mSpeedHistoryPtr] = 0.0;
 	calcMaxSpeed();

@@ -26,11 +26,11 @@ public:
 	unsigned long long mBRx{}, mBTx{}, mPRx{}, mPTx{};
 	// Statistics
 	unsigned long long mTotalBytesRx{}, mTotalBytesTx{}, mTotalPktRx{}, mTotalPktTx{};
-	// Speed buffers
-	double mSpeedBufferRx[SPEED_BUFFER_SIZE]{}, mSpeedBufferTx[SPEED_BUFFER_SIZE]{};
-	double mSpeedBufferPRx[SPEED_BUFFER_SIZE]{}, mSpeedBufferPTx[SPEED_BUFFER_SIZE]{};
-	// pointer to current speed buffer position
-	int mSpeedBufferPtr{};
+	// Traffic deltas for the rolling speed window
+	double mDeltaBufferRx[SPEED_BUFFER_SIZE]{}, mDeltaBufferTx[SPEED_BUFFER_SIZE]{};
+	double mDeltaBufferPRx[SPEED_BUFFER_SIZE]{}, mDeltaBufferPTx[SPEED_BUFFER_SIZE]{};
+	// pointer to current traffic delta buffer position
+	int mDeltaBufferPtr{};
 	int mSpeedHistoryPtr{};
 
 	// History buffer TODO: Make it configurable!
@@ -52,8 +52,8 @@ public:
 
 	const ViewOptions *getViewOptions() const { return &mOptions; }
 
-	// calc the speed using a speed buffer
-	static inline double calcSpeed(const double *buffer);
+	// Calculate a rate from traffic deltas and their measured durations.
+	inline double calcSpeed(const double *buffer) const;
 
 	inline bool interfaceIsValid() {
 		DIR *dir = opendir(mSysDevPath.toLatin1());
@@ -79,6 +79,7 @@ private:
 	QTimer *mTimer;                    // Timer
 	unsigned int mInterfaceIndex{};
 	QElapsedTimer mSampleClock;
+	double mSampleSeconds[SPEED_BUFFER_SIZE]{};
 
 	void resetSampling();
 	bool interfaceHasCarrier() const;
@@ -113,11 +114,14 @@ void QNetStatsView::calcMaxSpeed() {
 	}
 }
 
-double QNetStatsView::calcSpeed(const double *buffer) {
+double QNetStatsView::calcSpeed(const double *buffer) const {
 	double total = 0.0;
-	for (int i = 0; i < SPEED_BUFFER_SIZE; ++i)
+	double seconds = 0.0;
+	for (int i = 0; i < SPEED_BUFFER_SIZE; ++i) {
 		total += buffer[i];
-	return total / SPEED_BUFFER_SIZE;
+		seconds += mSampleSeconds[i];
+	}
+	return seconds > 0.0 ? total / seconds : 0.0;
 }
 
 int QNetStatsView::updateInterval() const {

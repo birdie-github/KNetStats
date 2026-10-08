@@ -37,8 +37,8 @@ void Statistics::updateStatistics() {
 
 	mPRx->setText(QString::number(mParent->mTotalPktRx));
 	mPTx->setText(QString::number(mParent->mTotalPktTx));
-	mPktSpeedRx->setText(QString::number(QNetStatsView::calcSpeed(mParent->mSpeedBufferPRx), 'f', 1) + " pkts/s");
-	mPktSpeedTx->setText(QString::number(QNetStatsView::calcSpeed(mParent->mSpeedBufferPTx), 'f', 1) + " pkts/s");
+	mPktSpeedRx->setText(QString::number(mParent->calcSpeed(mParent->mDeltaBufferPRx), 'f', 1) + " pkts/s");
+	mPktSpeedTx->setText(QString::number(mParent->calcSpeed(mParent->mDeltaBufferPTx), 'f', 1) + " pkts/s");
 
 	auto interface = QNetworkInterface::interfaceFromName(mParent->mInterface);
 	mMTU->setNum(interface.maximumTransmissionUnit());
