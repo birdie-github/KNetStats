@@ -419,7 +419,7 @@
             <item>
              <layout class="QVBoxLayout" name="verticalLayout">
               <item>
-               <widget class="KColorButton" name="mChartUplColor">
+               <widget class="ColorButton" name="mChartUplColor">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -432,7 +432,7 @@
                </widget>
               </item>
               <item>
-               <widget class="KColorButton" name="mChartDldColor">
+               <widget class="ColorButton" name="mChartDldColor">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -445,7 +445,7 @@
                </widget>
               </item>
               <item>
-               <widget class="KColorButton" name="mChartBgColor">
+               <widget class="ColorButton" name="mChartBgColor">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -524,9 +524,9 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>KColorButton</class>
+   <class>ColorButton</class>
    <extends>QPushButton</extends>
-   <header>kcolorbutton.h</header>
+   <header>colorbutton.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

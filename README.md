@@ -27,10 +27,12 @@ Otherwise, building instructions are provided below:
 
 An RPM SPEC file (untested) and an Arch PKGBUILD is provided within `dist/`. You can use those to install KNetStats on the appropriate distros.
 
+KNetStats uses Qt Widgets and Qt Network; KDE Frameworks are not required.
+
 Manually building KNetStats requires Git and the following packages to be installed
- - Ubuntu: `cmake g++ qtbase5-dev libkf5widgetsaddons-dev extra-cmake-modules`
- - Fedora: `cmake gcc-c++ qt5-qtbase-devel kf5-kwidgetsaddons-devel extra-cmake-modules`
- - Arch Linux: `cmake qt5-base kwidgetsaddons extra-cmake-modules`
+ - Ubuntu: `cmake g++ qtbase5-dev`
+ - Fedora: `cmake gcc-c++ qt5-qtbase-devel`
+ - Arch Linux: `cmake qt5-base`
 
 #### Procedure:
 

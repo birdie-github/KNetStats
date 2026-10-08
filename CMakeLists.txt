@@ -9,15 +9,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 set(QT_MIN_VERSION "5.5.0")
 
-find_package(ECM ${KF_MIN_VERSION} REQUIRED NO_MODULE)
-set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
-
 find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
         Core
         Network
         Widgets
 )
-find_package(KF5 REQUIRED COMPONENTS WidgetsAddons)
 
 set(CMAKE_AUTOMOC on)
 set(CMAKE_AUTOUIC on)
@@ -25,6 +21,8 @@ set(CMAKE_AUTORCC on)
 
 add_executable(knetstats
         src/chart.cpp
+        src/colorbutton.cpp
+        src/colorbutton.h
         src/configure.cpp
         src/knetstats.cpp
         src/knetstatsview.cpp
@@ -35,11 +33,12 @@ add_executable(knetstats
         res/knetstats.qrc
 )
 
+target_include_directories(knetstats PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+
 target_link_libraries(knetstats PRIVATE
         Qt5::Core
         Qt5::Network
         Qt5::Widgets
-        KF5::WidgetsAddons
 )
 
 install(TARGETS knetstats RUNTIME)

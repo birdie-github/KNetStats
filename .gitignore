@@ -1,3 +1,8 @@
-.idea/
 build/
-*build*/
+BUILD/
+*.bak
+*.orig
+*.rej
+*.patch
+*.diff
+.directory

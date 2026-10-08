@@ -11,8 +11,6 @@ Source:	    https://github.com/telans/KNetStats/archive/v%{version}.tar.gz
 BuildRequires: cmake
 BuildRequires: pkgconfig
 BuildRequires: qt5-qtbase-devel
-BuildRequires: kf5-kwidgetsaddons-devel
-BuildRequires: extra-cmake-modules
 
 %description
 KNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.
