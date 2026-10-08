@@ -1,11 +1,11 @@
 # Maintainer: James Beddek <birdie-github@posteo.de>
-pkgname=knetstats
-_pkgname=KNetStats
+pkgname=qnetstats
+_pkgname=QNetStats
 pkgver=2.0.0.alpha
 pkgrel=1
 pkgdesc="Network interface and statistics viewer"
 arch=('x86_64')
-url="https://github.com/birdie-github/KNetStats"
+url="https://github.com/birdie-github/QNetStats"
 license=('GPL-2')
 depends=(
     'qt6-base'
@@ -13,7 +13,7 @@ depends=(
 makedepends=(
     'cmake'
 )
-source=("$pkgname-$pkgver.tar.gz::https://github.com/birdie-github/KNetStats/archive/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/birdie-github/QNetStats/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {

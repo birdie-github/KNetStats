@@ -1,35 +1,35 @@
 <h1>
-  <img src="https://raw.githubusercontent.com/birdie-github/KNetStats/main/dist/hicolor/32x32/apps/com.birdie-github.KNetStats.png" alt="KNetStats Icon">
-  KNetStats
+  <img src="https://raw.githubusercontent.com/birdie-github/QNetStats/main/dist/hicolor/32x32/apps/com.birdie-github.QNetStats.png" alt="QNetStats Icon">
+  QNetStats
 </h1>
 
 ---
 
-<p>A simple network interface and statistics viewer for Linux based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project of the same name</a> by Hugo Parente Lima (hugo_pl).</p>
-<p>KNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.<br>It displays and graphs data transmission information for easy visualization. It also displays information such as associated IPs and MAC addresses.</p>
+<p>A simple network interface and statistics viewer for Linux based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
+<p>QNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.<br>It displays and graphs data transmission information for easy visualization. It also displays information such as associated IPs and MAC addresses.</p>
 
 ## Screenshots:
 
-![Statistics Window](https://raw.githubusercontent.com/birdie-github/KNetStats/main/.github/screenshots/StatisticsWindow.png)
-![Configure Window](https://raw.githubusercontent.com/birdie-github/KNetStats/main/.github/screenshots/ConfigureWindow.png)
+![Statistics Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/StatisticsWindow.png)
+![Configure Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/ConfigureWindow.png)
 
 <p>
   Preview of tray icons with different themes:
-  <img align="center" src="https://raw.githubusercontent.com/birdie-github/KNetStats/main/.github/screenshots/TrayIcons.png" alt="Tray Icons Preview">
+  <img align="center" src="https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/TrayIcons.png" alt="Tray Icons Preview">
 </p>
 
 ## Installation:
 
-If you wish to install a prebuilt release, please check the <a href=https://github.com/birdie-github/KNetStats/releases>Releases page</a>. An AUR package exists under the name <a href="https://aur.archlinux.org/packages/knetstats">knetstats</a>. \
+If you wish to install a prebuilt release, please check the <a href=https://github.com/birdie-github/QNetStats/releases>Releases page</a>. \
 Otherwise, building instructions are provided below:
 
 ### Prerequisites:
 
-An RPM SPEC file (untested) and an Arch PKGBUILD is provided within `dist/`. You can use those to install KNetStats on the appropriate distros.
+An RPM SPEC file (untested) and an Arch PKGBUILD is provided within `dist/`. You can use those to install QNetStats on the appropriate distros.
 
-KNetStats supports Qt 5.11 or newer and Qt 6, using Qt Widgets and Qt Network. KDE Frameworks are not required. CMake prefers Qt6 when available and otherwise uses Qt5. The provided packaging definitions select Qt6 explicitly.
+QNetStats supports Qt 5.11 or newer and Qt 6, using Qt Widgets and Qt Network. KDE Frameworks are not required. CMake prefers Qt6 when available and otherwise uses Qt5. The provided packaging definitions select Qt6 explicitly.
 
-Manually building KNetStats requires Git and the following packages to be installed
+Manually building QNetStats requires Git and the following packages to be installed
  - Ubuntu: `cmake g++ qt6-base-dev` (Qt5: `qtbase5-dev`)
  - Fedora: `cmake gcc-c++ qt6-qtbase-devel` (Qt5: `qt5-qtbase-devel`)
  - Arch Linux: `cmake qt6-base` (Qt5: `qt5-base`)
@@ -38,14 +38,14 @@ Manually building KNetStats requires Git and the following packages to be instal
 
 ```bash
 # Clone and enter this repository
-$ git clone https://github.com/birdie-github/KNetStats && cd KNetStats
+$ git clone https://github.com/birdie-github/QNetStats && cd QNetStats
  
 # Configure and build the program
 $ cmake -B build
 $ cmake --build build
  
-# At this point, you can run KNetStats by executing the binary located at
-# build/knetstats
+# At this point, you can run QNetStats by executing the binary located at
+# build/qnetstats
  
 # Install the program to /usr/local (default)
 $ sudo cmake --install build

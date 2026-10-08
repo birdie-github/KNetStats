@@ -1,11 +1,11 @@
 [Desktop Entry]
-Name=KNetStats
+Name=QNetStats
 GenericName=Network Interface & Statistics Viewer
 Type=Application
-Exec=knetstats
-Icon=com.birdie-github.KNetStats
+Exec=qnetstats
+Icon=com.birdie-github.QNetStats
 StartupNotify=true
-StartupWMClass=knetstats
+StartupWMClass=qnetstats
 Comment=Simple network interface & statistics viewer
 Categories=Qt;Network;Utility;
 Terminal=false

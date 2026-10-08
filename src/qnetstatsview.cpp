@@ -1,5 +1,5 @@
-#include "knetstatsview.h"
-#include "knetstats.h"
+#include "qnetstatsview.h"
+#include "qnetstats.h"
 #include <QTimer>
 
 #include <QMenu>
@@ -10,38 +10,38 @@
 
 extern const char *programName;
 
-KNetStatsView::KNetStatsView(KNetStats *parent, const QString &interface)
+QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 		: QWidget(parent), mParent(parent), mSysDevPath("/sys/class/net/" + interface + "/") {
 	mInterface = interface;
 	mCarrier = interfaceIsValid();
 	mFirstUpdate = true;
 
-	KNetStats::readInterfaceConfig(interface, &mOptions);
+	QNetStats::readInterfaceConfig(interface, &mOptions);
 	mTimer = new QTimer(this);
 	mStatistics = new Statistics(this);
 	mTrayIcon = new QSystemTrayIcon(this);
 	mContextMenu = new QMenu(this);
-	mContextMenu->addAction("Configure Interfaces", parent, &KNetStats::showConfigure);
-	mContextMenu->addAction("Quit KNetStats", parent, []() { QApplication::quit(); });
+	mContextMenu->addAction("Configure Interfaces", parent, &QNetStats::showConfigure);
+	mContextMenu->addAction("Quit QNetStats", parent, []() { QApplication::quit(); });
 
 	setupTrayIcon();
 	setupView();
 
 	mTimer->start(mOptions.mUpdateInterval);
-	connect(mTrayIcon, &QSystemTrayIcon::activated, this, &KNetStatsView::iconActivated);
+	connect(mTrayIcon, &QSystemTrayIcon::activated, this, &QNetStatsView::iconActivated);
 }
 
-void KNetStatsView::setupView() {
+void QNetStatsView::setupView() {
 	if (!interfaceIsValid()) {
-		connect(mTimer, &QTimer::timeout, this, &KNetStatsView::checkMissingInterface);
+		connect(mTimer, &QTimer::timeout, this, &QNetStatsView::checkMissingInterface);
 		return;
 	}
 
 	mTrayIcon->show();
-	connect(mTimer, &QTimer::timeout, this, &KNetStatsView::updateStats);
+	connect(mTimer, &QTimer::timeout, this, &QNetStatsView::updateStats);
 }
 
-void KNetStatsView::setupTrayIcon() {
+void QNetStatsView::setupTrayIcon() {
 	// Load Icons
 	mIconNone = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_none.png");
 	mIconTx = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_tx.png");
@@ -53,39 +53,39 @@ void KNetStatsView::setupTrayIcon() {
 	mTrayIcon->setIcon(*mCurrentIcon);
 }
 
-void KNetStatsView::checkMissingInterface() {
+void QNetStatsView::checkMissingInterface() {
 	if (interfaceIsValid()) {
 		mTrayIcon->show();
 		if (mOptions.mNotifications)
 			mTrayIcon->showMessage(programName, QString("Interface %1 reappeared!").arg(mInterface),
 								   QSystemTrayIcon::Information,
 								   3000);
-		disconnect(mTimer, &QTimer::timeout, this, &KNetStatsView::checkMissingInterface);
-		connect(mTimer, &QTimer::timeout, this, &KNetStatsView::updateStats);
+		disconnect(mTimer, &QTimer::timeout, this, &QNetStatsView::checkMissingInterface);
+		connect(mTimer, &QTimer::timeout, this, &QNetStatsView::updateStats);
 	}
 	mParent->checkTrayIconsAvailable();
 }
 
-void KNetStatsView::interfaceMissing() {
+void QNetStatsView::interfaceMissing() {
 	resetSampling();
 	if (mOptions.mNotifications)
 		mTrayIcon->showMessage(programName, QString("Interface %1 disappeared!").arg(mInterface),
 							   QSystemTrayIcon::Information,
 							   3000);
 	mTrayIcon->hide();
-	disconnect(mTimer, &QTimer::timeout, this, &KNetStatsView::updateStats);
-	connect(mTimer, &QTimer::timeout, this, &KNetStatsView::checkMissingInterface);
+	disconnect(mTimer, &QTimer::timeout, this, &QNetStatsView::updateStats);
+	connect(mTimer, &QTimer::timeout, this, &QNetStatsView::checkMissingInterface);
 	mParent->checkTrayIconsAvailable();
 }
 
-void KNetStatsView::updateViewOptions() {
-	KNetStats::readInterfaceConfig(mInterface, &mOptions);
+void QNetStatsView::updateViewOptions() {
+	QNetStats::readInterfaceConfig(mInterface, &mOptions);
 	mTimer->setInterval(mOptions.mUpdateInterval);
 	mStatistics->updateTimerInterval();
 	setupTrayIcon();
 }
 
-void KNetStatsView::updateStats() {
+void QNetStatsView::updateStats() {
 	if (!interfaceIsValid()) {
 		interfaceMissing();
 		return;
@@ -187,12 +187,12 @@ void KNetStatsView::updateStats() {
 	mPTx = ptx;
 }
 
-bool KNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) {
+bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) {
 	std::ifstream file((mSysDevPath + "statistics/" + name).toLatin1());
 	return bool(file >> value);
 }
 
-void KNetStatsView::resetSampling() {
+void QNetStatsView::resetSampling() {
 	mSampleClock.invalidate();
 	std::fill_n(mSpeedBufferRx, SPEED_BUFFER_SIZE, 0.0);
 	std::fill_n(mSpeedBufferTx, SPEED_BUFFER_SIZE, 0.0);
@@ -203,7 +203,7 @@ void KNetStatsView::resetSampling() {
 	calcMaxSpeed();
 }
 
-void KNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
+void QNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
 	if (reason == QSystemTrayIcon::ActivationReason::Trigger) {
 		if (mStatistics->isVisible())
 			mStatistics->hideWindow();

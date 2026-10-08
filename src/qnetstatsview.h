@@ -1,5 +1,5 @@
-#ifndef KNETSTATSVIEW_H
-#define KNETSTATSVIEW_H
+#ifndef QNETSTATSVIEW_H
+#define QNETSTATSVIEW_H
 
 #include <QSystemTrayIcon>
 #include <QWidget>
@@ -8,12 +8,12 @@
 #include <dirent.h>
 #include "configure.h"
 
-class KNetStats;
+class QNetStats;
 class Statistics;
 class QMenu;
 class QTimer;
 
-class KNetStatsView : public QWidget {
+class QNetStatsView : public QWidget {
 Q_OBJECT
 
 public:
@@ -39,7 +39,7 @@ public:
 	double mMaxSpeed{};
 	QString mInterface;                // Current interface
 
-	KNetStatsView(KNetStats *parent, const QString &interface);
+	QNetStatsView(QNetStats *parent, const QString &interface);
 
 	void updateViewOptions();
 
@@ -65,7 +65,7 @@ public:
 	inline bool trayIconVisible() { return mTrayIcon->isVisible(); }
 
 private:
-	KNetStats *mParent;
+	QNetStats *mParent;
 	QString mSysDevPath;            // Path to the device.
 	bool mCarrier;                    // Interface carrier is on?
 	QSystemTrayIcon *mTrayIcon;
@@ -100,7 +100,7 @@ private slots:
 	void interfaceMissing();
 };
 
-void KNetStatsView::calcMaxSpeed() {
+void QNetStatsView::calcMaxSpeed() {
 	mMaxSpeed = 0.0;
 	for (int i = 0; i < HISTORY_SIZE; ++i) {
 		if (mSpeedHistoryRx[i] > mMaxSpeed)
@@ -110,14 +110,14 @@ void KNetStatsView::calcMaxSpeed() {
 	}
 }
 
-double KNetStatsView::calcSpeed(const double *buffer) {
+double QNetStatsView::calcSpeed(const double *buffer) {
 	double total = 0.0;
 	for (int i = 0; i < SPEED_BUFFER_SIZE; ++i)
 		total += buffer[i];
 	return total / SPEED_BUFFER_SIZE;
 }
 
-int KNetStatsView::updateInterval() const {
+int QNetStatsView::updateInterval() const {
 	return mOptions.mUpdateInterval;
 }
 

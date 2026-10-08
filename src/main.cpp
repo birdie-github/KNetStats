@@ -1,16 +1,16 @@
 #include <QApplication>
 
-#include "knetstats.h"
+#include "qnetstats.h"
 
-const char *programName = "KNetStats";
+const char *programName = "QNetStats";
 
 int main(int argc, char **argv) {
-	QApplication::setOrganizationName("KNetStats");
-	QApplication::setApplicationName("KNetStats");
-	QApplication::setDesktopFileName("com.birdie-github.KNetStats");
+	QApplication::setOrganizationName("QNetStats");
+	QApplication::setApplicationName("QNetStats");
+	QApplication::setDesktopFileName("com.birdie-github.QNetStats");
 	QApplication::setQuitOnLastWindowClosed(false);
 	QApplication app(argc, argv);
-	KNetStats knetstats;
+	QNetStats qnetstats;
 
 	return QApplication::exec();
 }

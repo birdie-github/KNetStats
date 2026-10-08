@@ -1,6 +1,6 @@
 #include "statistics.h"
 #include "chart.h"
-#include "knetstatsview.h"
+#include "qnetstatsview.h"
 #include <QNetworkInterface>
 #include <QHostAddress>
 #include <QStringList>
@@ -8,15 +8,15 @@
 #include <QShowEvent>
 #include <QHideEvent>
 
-Statistics::Statistics(KNetStatsView *parent)
+Statistics::Statistics(QNetStatsView *parent)
 		: QDialog(parent), Ui::StatisticsBase(), mParent(parent) {
 
 	setupUi(this);
-	this->setWindowTitle(QString("Monitoring Interface %1 - KNetStats").arg(parent->mInterface));
+	this->setWindowTitle(QString("Monitoring Interface %1 - QNetStats").arg(parent->mInterface));
 
 	auto *chart = new Chart(parent->getViewOptions(), parent->mSpeedHistoryTx, parent->mSpeedHistoryRx,
 							&parent->mMaxSpeed,
-							&parent->mSpeedHistoryPtr, KNetStatsView::HISTORY_SIZE);
+							&parent->mSpeedHistoryPtr, QNetStatsView::HISTORY_SIZE);
 	mChart->addWidget(chart);
 	this->update();
 
@@ -37,8 +37,8 @@ void Statistics::updateStatistics() {
 
 	mPRx->setText(QString::number(mParent->mTotalPktRx));
 	mPTx->setText(QString::number(mParent->mTotalPktTx));
-	mPktSpeedRx->setText(QString::number(KNetStatsView::calcSpeed(mParent->mSpeedBufferPRx), 'f', 1) + " pkts/s");
-	mPktSpeedTx->setText(QString::number(KNetStatsView::calcSpeed(mParent->mSpeedBufferPTx), 'f', 1) + " pkts/s");
+	mPktSpeedRx->setText(QString::number(QNetStatsView::calcSpeed(mParent->mSpeedBufferPRx), 'f', 1) + " pkts/s");
+	mPktSpeedTx->setText(QString::number(QNetStatsView::calcSpeed(mParent->mSpeedBufferPTx), 'f', 1) + " pkts/s");
 
 	auto interface = QNetworkInterface::interfaceFromName(mParent->mInterface);
 	mMTU->setNum(interface.maximumTransmissionUnit());

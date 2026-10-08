@@ -3,14 +3,14 @@
 
 #include "ui_statisticsbase.h"
 
-class KNetStatsView;
+class QNetStatsView;
 class QShowEvent;
 class QHideEvent;
 
 class Statistics : public QDialog, public Ui::StatisticsBase {
 Q_OBJECT
 public:
-	explicit Statistics(KNetStatsView *parent);
+	explicit Statistics(QNetStatsView *parent);
 	void updateTimerInterval();
 
 protected:
@@ -19,7 +19,7 @@ protected:
 
 private:
 	QTimer *mTimer;
-	KNetStatsView *mParent;
+	QNetStatsView *mParent;
 
 public slots:
 

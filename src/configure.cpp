@@ -7,7 +7,7 @@
 #include <QStringList>
 
 #include "configure.h"
-#include "knetstats.h"
+#include "qnetstats.h"
 
 #include "ui_configurebase.h"
 
@@ -33,7 +33,7 @@ void Configure::showEvent(QShowEvent *event) {
 	QSettings settings;
 	const QStringList monitored = settings.value("CurrentViews", QStringList()).toStringList();
 	for (const QString &name : monitored)
-		KNetStats::readInterfaceConfig(name, &mConfig[name]);
+		QNetStats::readInterfaceConfig(name, &mConfig[name]);
 	refreshInterfaces();
 	const auto matches = mInterfaces->findItems(selected, Qt::MatchExactly);
 	if (!matches.isEmpty())
@@ -50,7 +50,7 @@ void Configure::refreshInterfaces() {
 		const QString name = interface.name();
 		available.append(name);
 		if (!mConfig.contains(name))
-			KNetStats::readInterfaceConfig(name, &mConfig[name]);
+			QNetStats::readInterfaceConfig(name, &mConfig[name]);
 	}
 
 	QListWidgetItem *current = nullptr;

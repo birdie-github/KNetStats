@@ -1,16 +1,16 @@
-#ifndef KNETSTATS_H
-#define KNETSTATS_H
+#ifndef QNETSTATS_H
+#define QNETSTATS_H
 
 #include "configure.h"
 #include <QHash>
 #include <QSystemTrayIcon>
 
-class KNetStatsView;
+class QNetStatsView;
 
-class KNetStats : public QDialog {
+class QNetStats : public QDialog {
 Q_OBJECT
 public:
-	KNetStats();
+	QNetStats();
 
 	static void readInterfaceConfig(const QString &ifName, ViewOptions *opts);
 
@@ -24,7 +24,7 @@ public slots:
 	void configApply();
 
 private:
-	typedef QHash<QString, KNetStatsView *> TrayIconMap;
+	typedef QHash<QString, QNetStatsView *> TrayIconMap;
 	QSystemTrayIcon *mBackupTrayIcon;
 	TrayIconMap mViews;
 	Configure *mConfigure;

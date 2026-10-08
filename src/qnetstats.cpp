@@ -1,5 +1,5 @@
-#include "knetstats.h"
-#include "knetstatsview.h"
+#include "qnetstats.h"
+#include "qnetstatsview.h"
 #include "configure.h"
 
 #include <QMenu>
@@ -9,7 +9,7 @@
 
 extern const char *programName;
 
-KNetStats::KNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
+QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 	// read the current views from config file
 	QSettings settings;
 	QStringList views = settings.value("CurrentViews", QStringList()).toStringList();
@@ -20,14 +20,14 @@ KNetStats::KNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 	} else {
 		// start the views
 		for (auto &view: views) {
-			auto *kview = new KNetStatsView(this, view);
+			auto *kview = new QNetStatsView(this, view);
 			mViews[view] = kview;
 		}
 	}
 	checkTrayIconsAvailable();
 }
 
-void KNetStats::checkTrayIconsAvailable() {
+void QNetStats::checkTrayIconsAvailable() {
 	for (auto view: mViews) {
 		if (view->trayIconVisible()) {
 			mBackupTrayIcon->hide();
@@ -37,7 +37,7 @@ void KNetStats::checkTrayIconsAvailable() {
 	mBackupTrayIcon->show();
 }
 
-void KNetStats::setup() {
+void QNetStats::setup() {
 	mConfigure = new Configure(this);
 	setupBackupTrayIcon();
 
@@ -56,16 +56,16 @@ void KNetStats::setup() {
 			mConfigure->accept();
 		}
 	});
-	connect(mConfigure->mApply, &QPushButton::clicked, this, &KNetStats::configApply);
+	connect(mConfigure->mApply, &QPushButton::clicked, this, &QNetStats::configApply);
 	connect(mConfigure->mCancel, &QPushButton::clicked, mConfigure, &QDialog::reject);
 }
 
-void KNetStats::setupBackupTrayIcon() {
+void QNetStats::setupBackupTrayIcon() {
 	mBackupTrayIcon = new QSystemTrayIcon(QIcon(":/img/interfaces_missing.png"), this);
 	mBackupTrayIcon->setToolTip("All Interfaces Unavailable");
 	auto *mContextMenu = new QMenu(this);
-	mContextMenu->addAction("Configure Interfaces", this, &KNetStats::showConfigure);
-	mContextMenu->addAction("Quit KNetStats", this, []() { QApplication::quit(); });
+	mContextMenu->addAction("Configure Interfaces", this, &QNetStats::showConfigure);
+	mContextMenu->addAction("Quit QNetStats", this, []() { QApplication::quit(); });
 	mBackupTrayIcon->setContextMenu(mContextMenu);
 
 	connect(mBackupTrayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
@@ -79,7 +79,7 @@ void KNetStats::setupBackupTrayIcon() {
 	});
 }
 
-void KNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
+void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	QSettings settings;
 	int defaultTheme = ifName.startsWith("wlan") ? 3 : 0;
 
@@ -99,12 +99,12 @@ void KNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	settings.endGroup();
 }
 
-void KNetStats::configApply() {
+void QNetStats::configApply() {
 	if (mConfigure->canSaveConfig())
 		saveConfig(mConfigure->options());
 }
 
-void KNetStats::saveConfig(const OptionsMap &options) {
+void QNetStats::saveConfig(const OptionsMap &options) {
 	QSettings settings;
 
 	for (OptionsMap::ConstIterator i = options.begin(); i != options.end(); ++i) {
@@ -126,7 +126,7 @@ void KNetStats::saveConfig(const OptionsMap &options) {
 
 		if (opt.mMonitoring) {    // check if we are already monitoring this interface.
 			if (trayIcon == mViews.end()) { // new interface!
-				auto *kview = new KNetStatsView(this, i.key());
+				auto *kview = new QNetStatsView(this, i.key());
 				mViews[i.key()] = kview;
 			} else
 				trayIcon.value()->updateViewOptions();
