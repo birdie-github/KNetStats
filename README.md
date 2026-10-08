@@ -37,6 +37,15 @@ the interface name and full rates; click either icon to toggle its statistics.
 of interface icon disabled, the application's fallback tray icon provides a
 Statistics menu for monitored interfaces.
 
+## Smooth chart scrolling
+
+The chart scrolls continuously at approximately 30 frames per second, revealing
+new segments over one measurement interval. Its vertical scale and maximum-speed
+label transition together. This adds about one sampling interval of visual delay
+without changing sampled values or the immediate, unsmoothed tray text rates.
+Animation stops while the chart is hidden and resumes from the current history
+when shown again.
+
 ## Compact chart mode
 
 Double-click the traffic chart to show only the chart, its current maximum-speed

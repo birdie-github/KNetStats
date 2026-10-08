@@ -57,6 +57,9 @@ public:
 
 	inline bool trayIconVisible() { return mTrayIcon->isVisible() || mTextTrayIcon->isVisible(); }
 
+signals:
+	void chartHistoryChanged(bool reset);
+
 private:
 	QNetStats *mParent;
 #ifndef Q_OS_WIN

@@ -65,12 +65,16 @@ Statistics::Statistics(QNetStatsView *parent)
 	connect(tabWidget, &QTabWidget::currentChanged, this, &Statistics::updateTabSize);
 	updateTabSize(tabWidget->currentIndex());
 	connect(mTimer, &QTimer::timeout, this, &Statistics::updateStatistics);
-	connect(mTimer, &QTimer::timeout, chart, qOverload<>(&Chart::repaint));
+	connect(parent, &QNetStatsView::chartHistoryChanged, chart, &Chart::sampleUpdated);
+	connect(chart, &Chart::maximumSpeedChanged, this, [this](double speed) {
+		mMaxSpeed->setText(locale().formattedDataSize(speed) + "/s");
+		updateCompactLabels();
+	});
 	connect(mOk, &QPushButton::clicked, this, &Statistics::hideWindow);
 }
 
 void Statistics::updateStatistics() {
-	mMaxSpeed->setText(this->locale().formattedDataSize(mParent->mMaxSpeed) + +"/s");
+	mMaxSpeed->setText(this->locale().formattedDataSize(mChartWidget->displayedMaximumSpeed()) + "/s");
 	if (mCompact)
 		updateCompactLabels();
 	mBRx->setText(this->locale().formattedDataSize(mParent->mTotalBytesRx));

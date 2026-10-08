@@ -189,7 +189,8 @@ void QNetStatsView::updateStats() {
 	if (newInterface || countersReset)
 		resetSampling();
 
-	if (mSampleClock.isValid()) {
+	const bool hadPreviousSample = mSampleClock.isValid();
+	if (hadPreviousSample) {
 		const qint64 elapsedNs = mSampleClock.nsecsElapsed();
 		if (elapsedNs <= 0)
 			return;
@@ -243,6 +244,7 @@ void QNetStatsView::updateStats() {
 	mPRx = prx;
 	mPTx = ptx;
 	updateTextTrayIcon();
+	emit chartHistoryChanged(!hadPreviousSample);
 }
 
 QString QNetStatsView::displayName() const {
@@ -327,6 +329,7 @@ void QNetStatsView::resetSampling() {
 	mSpeedHistoryTx[mSpeedHistoryPtr] = 0.0;
 	calcMaxSpeed();
 	updateTextTrayIcon();
+	emit chartHistoryChanged(true);
 }
 
 void QNetStatsView::showStatistics() {
