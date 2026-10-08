@@ -113,33 +113,12 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
                     painter.fillRect(origin.x() + x * scale, origin.y() + y * scale,
                                      scale, scale, QColor(options.mTextDigitColor));
 
-    // Keep glyph coverage separate from the digit and background. Only glyph
-    // pixels that intersect a lit digit pixel change color in inversion mode.
-    QImage rates(size, size, QImage::Format_ARGB32_Premultiplied);
-    rates.fill(Qt::transparent);
-    QPainter ratePainter(&rates);
-    ratePainter.setRenderHint(QPainter::TextAntialiasing);
-    const int shadowSize = options.mTextShowDigit &&
-        options.mTextDigitMode == ViewOptions::ShadowTrafficText ? scale : 0;
-    ratePainter.setPen(QColor(options.mTextUploadColor));
-    drawRate(ratePainter, uploadArea, options.mTextFont, upload, shadowSize);
-    ratePainter.setPen(QColor(options.mTextDownloadColor));
-    drawRate(ratePainter, downloadArea, options.mTextFont, download, shadowSize);
-    ratePainter.end();
-    if (options.mTextShowDigit && options.mTextDigitMode == ViewOptions::InvertTrafficText) {
-        for (int y = 0; y < 5 * scale; ++y)
-            for (int x = 0; x < 3 * scale; ++x) {
-                if (!(digits[digit][y / scale] & (1 << (2 - x / scale))))
-                    continue;
-                const int px = origin.x() + x;
-                const int py = origin.y() + y;
-                const QColor color = rates.pixelColor(px, py);
-                if (color.alpha() > 0)
-                    rates.setPixelColor(px, py, QColor(255 - color.red(), 255 - color.green(),
-                                                      255 - color.blue(), color.alpha()));
-            }
-    }
-    painter.drawImage(0, 0, rates);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    const int shadowSize = options.mTextShadow ? scale : 0;
+    painter.setPen(QColor(options.mTextUploadColor));
+    drawRate(painter, uploadArea, options.mTextFont, upload, shadowSize);
+    painter.setPen(QColor(options.mTextDownloadColor));
+    drawRate(painter, downloadArea, options.mTextFont, download, shadowSize);
     return image;
 }
 

@@ -9,7 +9,6 @@
 #include "ui_configurebase.h"
 
 struct ViewOptions {
-	enum TextDigitMode { InvertTrafficText = 0, ShadowTrafficText = 1 };
 	// general
 	int mUpdateInterval;
 	bool mMonitoring;
@@ -19,7 +18,7 @@ struct ViewOptions {
 	int mTextDigit;
 	int mTextDigitPosition;
 	bool mTextShowDigit;
-	TextDigitMode mTextDigitMode;
+	bool mTextShadow;
 	QString mTextDigitColor;
 	QString mTextUploadColor;
 	QString mTextDownloadColor;
@@ -71,7 +70,7 @@ private:
 	QComboBox *mTextDigit;
 	QComboBox *mTextDigitPosition;
 	QCheckBox *mTextShowDigit;
-	QComboBox *mTextDigitMode;
+	QCheckBox *mTextShadow;
 	ColorButton *mTextDigitColor;
 	ColorButton *mTextUploadColor;
 	ColorButton *mTextDownloadColor;

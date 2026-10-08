@@ -23,9 +23,8 @@ The font family and style are honored; its size is fitted automatically to use
 as much space as possible. The top row reserves space for a top-corner digit;
 the bottom row always uses the full width and draws its text over a bottom-corner
 digit. A **Show interface digit** checkbox hides the digit without releasing its
-assignment. **Overlap style** either inverts only the traffic-text pixels that
-overlap the digit (leaving the digit color intact), or adds a thin contrasting
-shadow around the traffic text. The digit stays assigned
+assignment. An independent **Text shadow** checkbox adds a thin contrasting
+shadow around the traffic text, including when the digit is hidden. The digit stays assigned
 when an interface disconnects, and unavailable rates appear as dashes. Hover for
 the interface name and full rates; click either icon to toggle its statistics.
 
