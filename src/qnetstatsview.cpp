@@ -1,17 +1,52 @@
-#include "qnetstatsview.h"
-#include "qnetstats.h"
-#include <QTimer>
-
-#include <QMenu>
+#include <QtGlobal>
+#ifdef Q_OS_WIN
+#include <winsock2.h>
+#include <iphlpapi.h>
+#include <QUuid>
+#else
 #include <fstream>
 #include <cstdio>
+#include <QFileInfo>
+#endif
 #include <algorithm>
+#include <QTimer>
+#include <QMenu>
+#include "qnetstatsview.h"
+#include "qnetstats.h"
 #include "statistics.h"
 
 extern const char *programName;
 
+#ifdef Q_OS_WIN
+namespace {
+bool readWindowsInterface(const QString &name, MIB_IF_ROW2 &row) {
+	row = {};
+	// Qt can return a Windows interface name or fall back to the adapter
+	// GUID. Resolve both to a LUID, avoiding mutable aliases.
+	if (ConvertInterfaceNameToLuidW(reinterpret_cast<const wchar_t *>(name.utf16()),
+								   &row.InterfaceLuid) != NO_ERROR) {
+		const QUuid uuid(name);
+		if (uuid.isNull())
+			return false;
+		GUID guid{};
+		guid.Data1 = uuid.data1;
+		guid.Data2 = uuid.data2;
+		guid.Data3 = uuid.data3;
+		std::copy_n(uuid.data4, 8, guid.Data4);
+		if (ConvertInterfaceGuidToLuid(&guid, &row.InterfaceLuid) != NO_ERROR)
+			return false;
+	}
+	return GetIfEntry2(&row) == NO_ERROR;
+}
+}
+#endif
+
 QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
-		: QWidget(parent), mParent(parent), mSysDevPath("/sys/class/net/" + interface + "/") {
+		: QWidget(parent), mParent(parent)
+#ifndef Q_OS_WIN
+		, mSysDevPath("/sys/class/net/" + interface + "/")
+#endif
+		{
 	mInterface = interface;
 	mCarrier = false;
 
@@ -48,7 +83,7 @@ void QNetStatsView::setupTrayIcon() {
 	mIconRx = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_rx.png");
 	mIconBoth = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_both.png");
 	mCurrentIcon = &mIconNone;
-	mTrayIcon->setToolTip(QString("Monitoring %1").arg(mInterface));
+	mTrayIcon->setToolTip(QString("Monitoring %1").arg(displayName()));
 	mTrayIcon->setContextMenu(mContextMenu);
 	mTrayIcon->setIcon(*mCurrentIcon);
 }
@@ -58,7 +93,7 @@ void QNetStatsView::checkMissingInterface() {
 		mCarrier = interfaceHasCarrier();
 		mTrayIcon->setVisible(mCarrier);
 		if (mOptions.mNotifications)
-			mTrayIcon->showMessage(programName, QString("Interface %1 reappeared!").arg(mInterface),
+			mTrayIcon->showMessage(programName, QString("Interface %1 reappeared!").arg(displayName()),
 								   QSystemTrayIcon::Information,
 								   3000);
 		disconnect(mTimer, &QTimer::timeout, this, &QNetStatsView::checkMissingInterface);
@@ -68,10 +103,10 @@ void QNetStatsView::checkMissingInterface() {
 }
 
 void QNetStatsView::interfaceMissing() {
-	mInterfaceIndex = 0;
+	mInterfaceIdentity = 0;
 	resetSampling();
 	if (mOptions.mNotifications)
-		mTrayIcon->showMessage(programName, QString("Interface %1 disappeared!").arg(mInterface),
+		mTrayIcon->showMessage(programName, QString("Interface %1 disappeared!").arg(displayName()),
 							   QSystemTrayIcon::Information,
 							   3000);
 	mTrayIcon->hide();
@@ -98,7 +133,7 @@ void QNetStatsView::updateStats() {
 		if (mCarrier) {
 			mCarrier = false;
 			if (mOptions.mNotifications)
-				mTrayIcon->showMessage(programName, QString("Interface %1 is down!").arg(mInterface),
+				mTrayIcon->showMessage(programName, QString("Interface %1 is down!").arg(displayName()),
 									   QSystemTrayIcon::Information,
 									   3000);
 		}
@@ -115,30 +150,27 @@ void QNetStatsView::updateStats() {
 		mParent->checkTrayIconsAvailable();
 	}
 	if (carrierWasDown && mOptions.mNotifications)
-		mTrayIcon->showMessage(programName, QString("Interface %1 is up!").arg(mInterface),
+		mTrayIcon->showMessage(programName, QString("Interface %1 is up!").arg(displayName()),
 							   QSystemTrayIcon::Information,
 							   3000);
 
-	const unsigned int interfaceIndex = readInterfaceIndex();
-	if (interfaceIndex == 0) {
+	const quint64 interfaceIdentity = readInterfaceIdentity();
+	if (interfaceIdentity == 0) {
 		resetSampling();
 		return;
 	}
 	unsigned long long brx{}, btx{}, prx{}, ptx{};
-	if (!readInterfaceNumValue("rx_bytes", brx) ||
-		!readInterfaceNumValue("tx_bytes", btx) ||
-		!readInterfaceNumValue("rx_packets", prx) ||
-		!readInterfaceNumValue("tx_packets", ptx)) {
+	if (!readInterfaceCounters(brx, btx, prx, ptx)) {
 		resetSampling();
 		return;
 	}
 
 	// Do not commit a sample collected across an interface replacement.
-	if (readInterfaceIndex() != interfaceIndex) {
+	if (readInterfaceIdentity() != interfaceIdentity) {
 		resetSampling();
 		return;
 	}
-	const bool newInterface = interfaceIndex != mInterfaceIndex;
+	const bool newInterface = interfaceIdentity != mInterfaceIdentity;
 	const bool countersReset = brx < mBRx || btx < mBTx || prx < mPRx || ptx < mPTx;
 	if (newInterface || countersReset)
 		resetSampling();
@@ -189,7 +221,7 @@ void QNetStatsView::updateStats() {
 	mTotalBytesTx += newInterface || btx < mBTx ? btx : btx - mBTx;
 	mTotalPktRx += newInterface || prx < mPRx ? prx : prx - mPRx;
 	mTotalPktTx += newInterface || ptx < mPTx ? ptx : ptx - mPTx;
-	mInterfaceIndex = interfaceIndex;
+	mInterfaceIdentity = interfaceIdentity;
 
 	mBRx = brx;
 	mBTx = btx;
@@ -197,7 +229,24 @@ void QNetStatsView::updateStats() {
 	mPTx = ptx;
 }
 
+QString QNetStatsView::displayName() const {
+	return QNetStats::interfaceDisplayName(mInterface);
+}
+
+bool QNetStatsView::interfaceIsValid() const {
+#ifdef Q_OS_WIN
+	MIB_IF_ROW2 row{};
+	return readWindowsInterface(mInterface, row);
+#else
+	return QFileInfo(mSysDevPath).isDir();
+#endif
+}
+
 bool QNetStatsView::interfaceHasCarrier() const {
+#ifdef Q_OS_WIN
+	MIB_IF_ROW2 row{};
+	return readWindowsInterface(mInterface, row) && row.OperStatus == IfOperStatusUp;
+#else
 	FILE *file = fopen((mSysDevPath + "carrier").toLatin1(), "r");
 	if (!file)
 		return false;
@@ -205,20 +254,49 @@ bool QNetStatsView::interfaceHasCarrier() const {
 	const bool carrier = fgetc(file) == '1';
 	fclose(file);
 	return carrier;
+#endif
 }
 
-unsigned int QNetStatsView::readInterfaceIndex() const {
+quint64 QNetStatsView::readInterfaceIdentity() const {
+#ifdef Q_OS_WIN
+	MIB_IF_ROW2 row{};
+	return readWindowsInterface(mInterface, row) ? row.InterfaceLuid.Value : 0;
+#else
 	unsigned int index{};
 	std::ifstream file((mSysDevPath + "ifindex").toLatin1());
 	if (!(file >> index))
 		return 0;
 	return index;
+#endif
 }
 
-bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) {
+bool QNetStatsView::readInterfaceCounters(unsigned long long &brx, unsigned long long &btx,
+										  unsigned long long &prx, unsigned long long &ptx) const {
+#ifdef Q_OS_WIN
+	MIB_IF_ROW2 row{};
+	if (!readWindowsInterface(mInterface, row))
+		return false;
+	// One snapshot, using 64-bit counters. Non-unicast includes broadcast
+	// and multicast packets, so packet totals cover all traffic.
+	brx = row.InOctets;
+	btx = row.OutOctets;
+	prx = row.InUcastPkts + row.InNUcastPkts;
+	ptx = row.OutUcastPkts + row.OutNUcastPkts;
+	return true;
+#else
+	return readInterfaceNumValue("rx_bytes", brx) &&
+		readInterfaceNumValue("tx_bytes", btx) &&
+		readInterfaceNumValue("rx_packets", prx) &&
+		readInterfaceNumValue("tx_packets", ptx);
+#endif
+}
+
+#ifndef Q_OS_WIN
+bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) const {
 	std::ifstream file((mSysDevPath + "statistics/" + name).toLatin1());
 	return bool(file >> value);
 }
+#endif
 
 void QNetStatsView::resetSampling() {
 	mSampleClock.invalidate();

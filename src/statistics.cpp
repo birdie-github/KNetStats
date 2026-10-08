@@ -28,7 +28,7 @@ Statistics::Statistics(QNetStatsView *parent)
 		: QDialog(parent), Ui::StatisticsBase(), mParent(parent) {
 
 	setupUi(this);
-	this->setWindowTitle(QString("Monitoring Interface %1 - QNetStats").arg(parent->mInterface));
+	this->setWindowTitle(QString("Monitoring Interface %1 - QNetStats").arg(parent->displayName()));
 
 	auto *chart = new Chart(parent->getViewOptions(), parent->mSpeedHistoryTx, parent->mSpeedHistoryRx,
 							&parent->mMaxSpeed,
@@ -47,7 +47,7 @@ Statistics::Statistics(QNetStatsView *parent)
 	mRootLayout->setSpacing(0);
 	mRootLayout->addWidget(mNormalContent);
 
-	mInterfaceLabel = new QLabel(parent->mInterface, chart);
+	mInterfaceLabel = new QLabel(parent->displayName(), chart);
 	mInterfaceLabel->setFont(font());
 	mInterfaceLabel->setAutoFillBackground(true);
 	mInterfaceLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -115,7 +115,7 @@ void Statistics::updateCompactLabels() {
 	// Keep the scale readable when space is tight; shorten the interface name
 	// rather than allowing the two labels to overlap.
 	const int nameWidth = qMax(0, availableWidth - mCompactMaxSpeedLabel->width() - 6);
-	mInterfaceLabel->setText(mInterfaceLabel->fontMetrics().elidedText(mParent->mInterface, Qt::ElideRight, nameWidth));
+	mInterfaceLabel->setText(mInterfaceLabel->fontMetrics().elidedText(mParent->displayName(), Qt::ElideRight, nameWidth));
 	const QSize nameSize = mInterfaceLabel->sizeHint();
 	mInterfaceLabel->resize(qMin(nameSize.width(), nameWidth), nameSize.height());
 	mInterfaceLabel->move(qMax(6, mChartWidget->width() - mInterfaceLabel->width() - 6), 4);

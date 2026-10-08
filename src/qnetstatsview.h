@@ -5,7 +5,6 @@
 #include <QWidget>
 #include <QIcon>
 #include <QElapsedTimer>
-#include <dirent.h>
 #include "configure.h"
 
 class QNetStats;
@@ -44,8 +43,7 @@ public:
 	void updateViewOptions();
 	void showStatistics();
 
-	// read a value from /sys/class/net/interface/name
-	bool readInterfaceNumValue(const char *name, unsigned long long &value);
+	QString displayName() const;
 
 	///	The current Update Interval in miliseconds
 	inline int updateInterval() const;
@@ -55,19 +53,15 @@ public:
 	// Calculate a rate from traffic deltas and their measured durations.
 	inline double calcSpeed(const double *buffer) const;
 
-	inline bool interfaceIsValid() {
-		DIR *dir = opendir(mSysDevPath.toLatin1());
-		if (!dir)
-			return false;
-		closedir(dir);
-		return true;
-	};
+	bool interfaceIsValid() const;
 
 	inline bool trayIconVisible() { return mTrayIcon->isVisible(); }
 
 private:
 	QNetStats *mParent;
-	QString mSysDevPath;            // Path to the device.
+#ifndef Q_OS_WIN
+	QString mSysDevPath;            // Path to the Linux device.
+#endif
 	bool mCarrier;                    // Interface carrier is on?
 	QSystemTrayIcon *mTrayIcon;
 	QMenu *mContextMenu;
@@ -77,13 +71,18 @@ private:
 	QIcon mIconNone, mIconTx, mIconRx, mIconBoth;
 	QIcon *mCurrentIcon{};            // Current state
 	QTimer *mTimer;                    // Timer
-	unsigned int mInterfaceIndex{};
+	quint64 mInterfaceIdentity{};
 	QElapsedTimer mSampleClock;
 	double mSampleSeconds[SPEED_BUFFER_SIZE]{};
 
 	void resetSampling();
 	bool interfaceHasCarrier() const;
-	unsigned int readInterfaceIndex() const;
+	quint64 readInterfaceIdentity() const;
+	bool readInterfaceCounters(unsigned long long &brx, unsigned long long &btx,
+							   unsigned long long &prx, unsigned long long &ptx) const;
+#ifndef Q_OS_WIN
+	bool readInterfaceNumValue(const char *name, unsigned long long &value) const;
+#endif
 
 	// set up the view.
 	void setupTrayIcon();

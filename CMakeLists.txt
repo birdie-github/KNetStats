@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(qnetstats)
 
-if(NOT CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
-    MESSAGE(FATAL_ERROR "Building QNetStats is not supported on ${CMAKE_HOST_SYSTEM_NAME}")
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT WIN32)
+    message(FATAL_ERROR "Building QNetStats is not supported on ${CMAKE_SYSTEM_NAME}")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -56,10 +56,22 @@ target_link_libraries(qnetstats PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
 )
 
+if(WIN32)
+    set_target_properties(qnetstats PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_compile_definitions(qnetstats PRIVATE
+        WINVER=0x0A00 _WIN32_WINNT=0x0A00 NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(qnetstats PRIVATE iphlpapi ws2_32)
+    if(MSVC)
+        target_compile_options(qnetstats PRIVATE /utf-8)
+    endif()
+endif()
+
 install(TARGETS qnetstats RUNTIME)
-install(FILES dist/com.birdie-github.QNetStats.desktop
-        DESTINATION share/applications)
-install(FILES dist/com.birdie-github.QNetStats.appdata.xml
-        DESTINATION share/metainfo)
-install(DIRECTORY dist/hicolor
-        DESTINATION share/icons)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(FILES dist/com.birdie-github.QNetStats.desktop
+            DESTINATION share/applications)
+    install(FILES dist/com.birdie-github.QNetStats.appdata.xml
+            DESTINATION share/metainfo)
+    install(DIRECTORY dist/hicolor
+            DESTINATION share/icons)
+endif()

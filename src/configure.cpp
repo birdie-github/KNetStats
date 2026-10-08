@@ -35,9 +35,13 @@ void Configure::showEvent(QShowEvent *event) {
 	for (const QString &name : monitored)
 		QNetStats::readInterfaceConfig(name, &mConfig[name]);
 	refreshInterfaces();
-	const auto matches = mInterfaces->findItems(selected, Qt::MatchExactly);
-	if (!matches.isEmpty())
-		mInterfaces->setCurrentItem(matches.first());
+	for (int i = 0; i < mInterfaces->count(); ++i) {
+		auto *item = mInterfaces->item(i);
+		if (item->data(Qt::UserRole).toString() == selected) {
+			mInterfaces->setCurrentItem(item);
+			break;
+		}
+	}
 	QDialog::showEvent(event);
 }
 
@@ -58,7 +62,9 @@ void Configure::refreshInterfaces() {
 		const QSignalBlocker blocker(mInterfaces);
 		mInterfaces->clear();
 		for (auto it = mConfig.constBegin(); it != mConfig.constEnd(); ++it) {
-			auto *item = new QListWidgetItem(mInterfaceIcon, it.key(), mInterfaces);
+			auto *item = new QListWidgetItem(mInterfaceIcon, QNetStats::interfaceDisplayName(it.key()), mInterfaces);
+			item->setData(Qt::UserRole, it.key());
+			item->setToolTip(it.key());
 			if (!available.contains(it.key())) {
 				item->setIcon(QIcon(":/img/interfaces_missing.png"));
 				item->setToolTip(tr("Interface currently unavailable"));
@@ -96,7 +102,7 @@ void Configure::changeInterface(QListWidgetItem *item) {
 		mCurrentItem.clear();
 		return;
 	}
-	const QString interface = item->text();
+	const QString interface = item->data(Qt::UserRole).toString();
 	if (interface == mCurrentItem)
 		return;
 	// Load the new interface options

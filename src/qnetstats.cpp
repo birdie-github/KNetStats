@@ -139,16 +139,22 @@ void QNetStats::updateFallbackWindow() {
 	names.sort();
 	QStringList displayed;
 	for (int i = 0; i < mFallbackInterfaces->count(); ++i)
-		displayed.append(mFallbackInterfaces->item(i)->text());
+		displayed.append(mFallbackInterfaces->item(i)->data(Qt::UserRole).toString());
 	if (names != displayed) {
 		const auto *selected = mFallbackInterfaces->currentItem();
-		const QString selectedName = selected ? selected->text() : QString();
+		const QString selectedName = selected ? selected->data(Qt::UserRole).toString() : QString();
 		const QSignalBlocker blocker(mFallbackInterfaces);
 		mFallbackInterfaces->clear();
-		mFallbackInterfaces->addItems(names);
-		const auto matches = mFallbackInterfaces->findItems(selectedName, Qt::MatchExactly);
-		if (!matches.isEmpty())
-			mFallbackInterfaces->setCurrentItem(matches.first());
+		QListWidgetItem *current = nullptr;
+		for (const QString &name : names) {
+			auto *item = new QListWidgetItem(interfaceDisplayName(name), mFallbackInterfaces);
+			item->setData(Qt::UserRole, name);
+			item->setToolTip(name);
+			if (name == selectedName)
+				current = item;
+		}
+		if (current)
+			mFallbackInterfaces->setCurrentItem(current);
 		else if (!names.isEmpty())
 			mFallbackInterfaces->setCurrentRow(0);
 	}
@@ -161,7 +167,7 @@ void QNetStats::showSelectedStatistics() {
 	const auto *item = mFallbackInterfaces->currentItem();
 	if (!item)
 		return;
-	auto *view = mViews.value(item->text(), nullptr);
+	auto *view = mViews.value(item->data(Qt::UserRole).toString(), nullptr);
 	if (view)
 		view->showStatistics();
 }
@@ -172,9 +178,23 @@ void QNetStats::showConfigure() {
 	mConfigure->activateWindow();
 }
 
+QString QNetStats::interfaceDisplayName(const QString &name) {
+#ifdef Q_OS_WIN
+	const auto interface = QNetworkInterface::interfaceFromName(name);
+	const QString friendlyName = interface.humanReadableName();
+	if (!friendlyName.isEmpty())
+		return friendlyName;
+#endif
+	return name;
+}
+
 void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	QSettings settings;
 	int defaultTheme = ifName.startsWith("wlan") ? 3 : 0;
+#ifdef Q_OS_WIN
+	if (QNetworkInterface::interfaceFromName(ifName).type() == QNetworkInterface::Wifi)
+		defaultTheme = 3;
+#endif
 
 	settings.beginGroup(ifName);
 	// General Settings

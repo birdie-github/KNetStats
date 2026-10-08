@@ -5,7 +5,7 @@
 
 ---
 
-<p>A simple network interface and statistics viewer for Linux based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
+<p>A simple network interface and statistics viewer for Linux and Windows 10/11 based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
 <p>QNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.<br>It displays and graphs data transmission information for easy visualization. It also displays information such as associated IPs and MAC addresses.</p>
 
 ## Compact chart mode
@@ -41,7 +41,8 @@ Otherwise, building instructions are provided below:
 
 An RPM SPEC file (untested) and an Arch PKGBUILD is provided within `dist/`. You can use those to install QNetStats on the appropriate distros.
 
-QNetStats supports Qt 5.11 or newer and Qt 6, using Qt Widgets and Qt Network. KDE Frameworks are not required. CMake prefers Qt6 when available and otherwise uses Qt5. The provided packaging definitions select Qt6 explicitly.
+QNetStats supports Qt 5.11 or newer and Qt 6 on Linux and Windows 10/11, using Qt Widgets and Qt Network. KDE Frameworks are not required.
+CMake prefers Qt6 when available and otherwise uses Qt5. The provided packaging definitions select Qt6 explicitly.
 
 Manually building QNetStats requires Git and the following packages to be installed
  - Ubuntu: `cmake g++ qt6-base-dev` (Qt5: `qtbase5-dev`)
@@ -77,16 +78,41 @@ cmake --build build-qt6
 
 The default is `-DUSE_QT=AUTO`. An explicitly selected version must be installed; CMake will not fall back to another version.
 
+### Windows 10 and 11
+
+Install CMake, a matching Qt 5.11+ or Qt 6 desktop kit, and its compiler. For example, use
+an MSVC 2022 x64 Qt kit with Visual Studio 2022 Build Tools, the C++ workload,
+and the Windows SDK. Only Qt Core, Gui, Widgets, and Network are needed.
+
+For Qt 6, from an x64 Visual Studio developer command prompt, substituting your
+Qt kit path:
+
+```bat
+cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64 -DUSE_QT=6 -DCMAKE_PREFIX_PATH="C:/Qt/6.8.3/msvc2022_64"
+cmake --build build-win --config Release
+"C:/Qt/6.8.3/msvc2022_64/bin/windeployqt.exe" --release --no-translations build-win/Release/qnetstats.exe
+build-win\Release\qnetstats.exe
+```
+
+For Qt 5, use `-DUSE_QT=5`, point `CMAKE_PREFIX_PATH` at the Qt 5 kit, and use
+that kit's compiler and `windeployqt`. The `AUTO` selection works on Windows too.
+
+The compiler must match the Qt kit; an MSVC Qt kit cannot be used with MinGW.
+`windeployqt` copies the Qt libraries and plugins needed to run the executable.
+Windows CI artifacts will be added separately.
+
+On Windows, traffic counters and connection status come from the system IP
+Helper API. Adapter names shown in the UI are friendly names such as Wi-Fi or
+Ethernet; settings use the internal adapter identifier. QSettings stores these
+settings under `HKEY_CURRENT_USER\Software\QNetStats\QNetStats` by default.
+
 ---
 
 ## Notes / Caveats:
 
- - This project is new and a lot of changes had to be made to make it compatible with Qt 5
-   - New features have been added, and I'm not the best programmer, so I expect there will be a couple bugs here and there
- - For the time being only Linux is supported
+ - The supported platforms are Linux and Windows 10/11.
  - Without a system tray, a fallback window provides access to statistics, configuration, and Quit. Closing that window exits the app while no tray is available.
  - The original translations have not yet been incorporated, though the files remain in this repository
- - Any contributions would be greatly appreciated
 
 ## Credits:
 
