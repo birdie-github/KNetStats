@@ -310,7 +310,7 @@ bool QNetStats::interfaceIsIgnored(const QString &name) {
 	request.ifr_data = reinterpret_cast<char *>(&info);
 	const bool ignored = ioctl(fd, SIOCETHTOOL, &request) == 0 &&
 		std::strncmp(info.driver, "dummy", sizeof(info.driver)) == 0;
-	close(fd);
+	::close(fd);
 	return ignored;
 #else
 	Q_UNUSED(name);
