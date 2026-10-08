@@ -16,6 +16,7 @@ public:
 	QNetStats();
 
 	static QString interfaceDisplayName(const QString &name);
+	static bool interfaceIsIgnored(const QString &name);
 
 	static void readInterfaceConfig(const QString &ifName, ViewOptions *opts);
 

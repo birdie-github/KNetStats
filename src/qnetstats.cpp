@@ -18,6 +18,17 @@
 #include <QColor>
 #include <QSet>
 #include <algorithm>
+#ifdef Q_OS_LINUX
+#include <QFileInfo>
+#include <QRegularExpression>
+#include <net/if.h>
+#include <linux/ethtool.h>
+#include <linux/sockios.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <cstring>
+#endif
 
 extern const char *programName;
 
@@ -76,6 +87,10 @@ QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 	QSettings settings;
 	QStringList views = settings.value("CurrentViews", QStringList()).toStringList();
 
+	const QStringList savedViews = views;
+	views.erase(std::remove_if(views.begin(), views.end(), &QNetStats::interfaceIsIgnored), views.end());
+	if (views != savedViews)
+		settings.setValue("CurrentViews", views);
 	views.removeDuplicates();
 	views.sort();
 	QSet<int> digits;
@@ -273,6 +288,36 @@ QString QNetStats::interfaceDisplayName(const QString &name) {
 	return name;
 }
 
+bool QNetStats::interfaceIsIgnored(const QString &name) {
+#ifdef Q_OS_LINUX
+	// Old saved dummyN entries must not return as unavailable interfaces.
+	if (!QFileInfo::exists("/sys/class/net/" + name)) {
+		static const QRegularExpression dummyName(QStringLiteral("^dummy[0-9]+$"));
+		return dummyName.match(name).hasMatch();
+	}
+	// Query the driver, so renamed dummy devices are excluded too and VPN,
+	// bridge and other virtual interfaces remain eligible for monitoring.
+	const QByteArray encoded = name.toLocal8Bit();
+	if (encoded.isEmpty() || encoded.size() >= IFNAMSIZ)
+		return false;
+	const int fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (fd < 0)
+		return false;
+	struct ifreq request{};
+	std::memcpy(request.ifr_name, encoded.constData(), encoded.size());
+	struct ethtool_drvinfo info{};
+	info.cmd = ETHTOOL_GDRVINFO;
+	request.ifr_data = reinterpret_cast<char *>(&info);
+	const bool ignored = ioctl(fd, SIOCETHTOOL, &request) == 0 &&
+		std::strncmp(info.driver, "dummy", sizeof(info.driver)) == 0;
+	close(fd);
+	return ignored;
+#else
+	Q_UNUSED(name);
+	return false;
+#endif
+}
+
 void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	QSettings settings;
 	const ViewOptions defaults = defaultInterfaceOptions(ifName);
@@ -311,6 +356,10 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 	QSettings settings;
 
 	for (OptionsMap::ConstIterator i = options.begin(); i != options.end(); ++i) {
+		if (interfaceIsIgnored(i.key())) {
+			delete mViews.take(i.key());
+			continue;
+		}
 		TrayIconMap::Iterator trayIcon = mViews.find(i.key());
 		const ViewOptions &opt = i.value();
 
@@ -357,6 +406,7 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 	}
 
 	settings.setValue("CurrentViews", QStringList(mViews.keys()));
+	checkTrayIconsAvailable();
 }
 
 void QNetStats::showInterfaceNotification(const QString &message,

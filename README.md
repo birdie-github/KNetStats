@@ -150,6 +150,7 @@ settings under `HKEY_CURRENT_USER\Software\QNetStats\QNetStats` by default.
 ## Notes / Caveats:
 
  - The supported platforms are Linux and Windows 10/11.
+ - Linux dummy interfaces are excluded from configuration and monitoring, including renamed dummy devices. Missing saved entries named `dummy` followed by digits are also excluded. Other virtual interfaces, including VPNs, remain available.
  - Without a system tray, a fallback window provides access to statistics, configuration, and Quit. Closing that window exits the app while no tray is available.
  - The original translations have not yet been incorporated, though the files remain in this repository
 

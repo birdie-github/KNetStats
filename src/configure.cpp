@@ -41,7 +41,8 @@ void Configure::showEvent(QShowEvent *event) {
 	QSettings settings;
 	const QStringList monitored = settings.value("CurrentViews", QStringList()).toStringList();
 	for (const QString &name : monitored)
-		QNetStats::readInterfaceConfig(name, &mConfig[name]);
+		if (!QNetStats::interfaceIsIgnored(name))
+			QNetStats::readInterfaceConfig(name, &mConfig[name]);
 	refreshInterfaces();
 	for (int i = 0; i < mInterfaces->count(); ++i) {
 		auto *item = mInterfaces->item(i);
@@ -56,10 +57,19 @@ void Configure::showEvent(QShowEvent *event) {
 void Configure::refreshInterfaces() {
 	storeCurrentOptions();
 	const QString selected = mCurrentItem;
+	// Drop cached entries as well as excluding newly discovered devices.
+	for (auto it = mConfig.begin(); it != mConfig.end();) {
+		if (QNetStats::interfaceIsIgnored(it.key()))
+			it = mConfig.erase(it);
+		else
+			++it;
+	}
 	QStringList available;
 	const auto interfaces = QNetworkInterface::allInterfaces();
 	for (const auto &interface : interfaces) {
 		const QString name = interface.name();
+		if (QNetStats::interfaceIsIgnored(name))
+			continue;
 		available.append(name);
 		if (!mConfig.contains(name))
 			QNetStats::readInterfaceConfig(name, &mConfig[name]);
