@@ -35,6 +35,7 @@ set(CMAKE_AUTOUIC on)
 set(CMAKE_AUTORCC on)
 
 add_executable(qnetstats
+        src/textstatistics.cpp
         src/chart.cpp
         src/colorbutton.cpp
         src/colorbutton.h

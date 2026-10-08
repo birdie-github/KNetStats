@@ -55,7 +55,7 @@ public:
 
 	bool interfaceIsValid() const;
 
-	inline bool trayIconVisible() { return mTrayIcon->isVisible(); }
+	inline bool trayIconVisible() { return mTrayIcon->isVisible() || mTextTrayIcon->isVisible(); }
 
 private:
 	QNetStats *mParent;
@@ -64,6 +64,9 @@ private:
 #endif
 	bool mCarrier;                    // Interface carrier is on?
 	QSystemTrayIcon *mTrayIcon;
+	QSystemTrayIcon *mTextTrayIcon;
+	QString mLastUpload, mLastDownload;
+	bool mRatesAvailable = false;
 	QMenu *mContextMenu;
 	Statistics *mStatistics;        // Statistics window
 	ViewOptions mOptions;            // View options
@@ -75,6 +78,7 @@ private:
 	QElapsedTimer mSampleClock;
 	double mSampleSeconds[SPEED_BUFFER_SIZE]{};
 
+	void updateTextTrayIcon(bool force = false);
 	void resetSampling();
 	bool interfaceHasCarrier() const;
 	quint64 readInterfaceIdentity() const;

@@ -8,6 +8,26 @@
 <p>A simple network interface and statistics viewer for Linux and Windows 10/11 based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
 <p>QNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.<br>It displays and graphs data transmission information for easy visualization. It also displays information such as associated IPs and MAC addresses.</p>
 
+## Text statistics tray icons
+
+Enable **Display Text Statistics** for an interface to add an icon showing upload
+above download, in bytes per second. Short units use powers of 1024: `K`, `M`,
+`G`, `T`, and `P`. Each monitored text icon has a unique digit from 0 to 9;
+used digits cannot be selected for another monitored text icon. This limits text
+icons to ten interfaces, without limiting ordinary interface monitoring.
+
+The separate text statistics section offers all four digit corners, digit and
+statistics colors, background color, a statistics font, and actual-size previews.
+The font family and style are honored; its size is fitted automatically to use
+as much space as possible without overlapping the digit. The digit stays assigned
+when an interface disconnects, and unavailable rates appear as dashes. Hover for
+the interface name and full rates; click either icon to toggle its statistics.
+
+**Display Tray Icon** controls the original activity icon independently.
+**Notify Interface Changes** controls connection notifications. With both kinds
+of interface icon disabled, the application's fallback tray icon provides a
+Statistics menu for monitored interfaces.
+
 ## Compact chart mode
 
 Double-click the traffic chart to show only the chart, its current maximum-speed

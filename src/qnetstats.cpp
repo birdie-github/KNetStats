@@ -14,6 +14,9 @@
 #include <QHBoxLayout>
 #include <QSignalBlocker>
 #include <QTimer>
+#include <QFontDatabase>
+#include <QSet>
+#include <algorithm>
 
 extern const char *programName;
 
@@ -21,6 +24,28 @@ QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 	// read the current views from config file
 	QSettings settings;
 	QStringList views = settings.value("CurrentViews", QStringList()).toStringList();
+
+	views.removeDuplicates();
+	views.sort();
+	QSet<int> digits;
+	for (const QString &name : views) {
+		ViewOptions opts;
+		readInterfaceConfig(name, &opts);
+		if (!opts.mDisplayTextStatistics)
+			continue;
+		int digit = opts.mTextDigit;
+		if (digits.contains(digit)) {
+			for (digit = 0; digit < 10 && digits.contains(digit); ++digit) {}
+			settings.beginGroup(name);
+			if (digit < 10)
+				settings.setValue("TextStatisticsDigit", digit);
+			else
+				settings.setValue("DisplayTextStatistics", false);
+			settings.endGroup();
+		}
+		if (digit < 10)
+			digits.insert(digit);
+	}
 
 	setup();
 	if (views.empty()) {    // no views... =/, display the configuration dialog
@@ -37,6 +62,14 @@ QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 
 void QNetStats::checkTrayIconsAvailable() {
 	updateFallbackWindow();
+	mBackupStatisticsMenu->clear();
+	QStringList names = mViews.keys();
+	names.sort();
+	for (const QString &name : names) {
+		auto *view = mViews.value(name);
+		mBackupStatisticsMenu->addAction(view->displayName(), view, &QNetStatsView::showStatistics);
+	}
+	mBackupStatisticsMenu->setEnabled(!names.isEmpty());
 	for (auto view: mViews) {
 		if (view->trayIconVisible()) {
 			mBackupTrayIcon->hide();
@@ -72,8 +105,9 @@ void QNetStats::setup() {
 
 void QNetStats::setupBackupTrayIcon() {
 	mBackupTrayIcon = new QSystemTrayIcon(QIcon(":/img/interfaces_missing.png"), this);
-	mBackupTrayIcon->setToolTip("All Interfaces Unavailable");
+	mBackupTrayIcon->setToolTip("QNetStats — Configure Interfaces");
 	auto *mContextMenu = new QMenu(this);
+	mBackupStatisticsMenu = mContextMenu->addMenu(tr("Statistics"));
 	mContextMenu->addAction("Configure Interfaces", this, &QNetStats::showConfigure);
 	mContextMenu->addAction("Quit QNetStats", this, []() { QApplication::quit(); });
 	mBackupTrayIcon->setContextMenu(mContextMenu);
@@ -203,6 +237,16 @@ void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 		opts->mUpdateInterval = 500;
 	opts->mMonitoring = settings.value("Monitoring", true).toBool();
 	opts->mNotifications = settings.value("DisplayNotifications", true).toBool();
+	opts->mDisplayTrayIcon = settings.value("DisplayTrayIcon", true).toBool();
+	opts->mDisplayTextStatistics = settings.value("DisplayTextStatistics", false).toBool();
+	opts->mTextDigit = std::clamp(settings.value("TextStatisticsDigit", 0).toInt(), 0, 9);
+	opts->mTextDigitPosition = std::clamp(settings.value("TextStatisticsDigitPosition", 0).toInt(), 0, 3);
+	opts->mTextDigitColor = settings.value("TextStatisticsDigitColor", "#ffd700").toString();
+	opts->mTextColor = settings.value("TextStatisticsColor", "#ffffff").toString();
+	opts->mTextBackgroundColor = settings.value("TextStatisticsBackgroundColor", "#202020").toString();
+	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	font.setBold(true);
+	opts->mTextFont = settings.value("TextStatisticsFont", QVariant::fromValue(font)).value<QFont>();
 	opts->mTheme = settings.value("Theme", defaultTheme).toInt();
 	// Graph Settings
 	opts->mChartUplColor = settings.value("ChartUplColor", "#FF0000").toString();
@@ -229,6 +273,14 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 		settings.setValue("UpdateInterval", opt.mUpdateInterval);
 		settings.setValue("Monitoring", opt.mMonitoring);
 		settings.setValue("DisplayNotifications", opt.mNotifications);
+		settings.setValue("DisplayTrayIcon", opt.mDisplayTrayIcon);
+		settings.setValue("DisplayTextStatistics", opt.mDisplayTextStatistics);
+		settings.setValue("TextStatisticsDigit", opt.mTextDigit);
+		settings.setValue("TextStatisticsDigitPosition", opt.mTextDigitPosition);
+		settings.setValue("TextStatisticsDigitColor", opt.mTextDigitColor);
+		settings.setValue("TextStatisticsColor", opt.mTextColor);
+		settings.setValue("TextStatisticsBackgroundColor", opt.mTextBackgroundColor);
+		settings.setValue("TextStatisticsFont", QVariant::fromValue(opt.mTextFont));
 		settings.setValue("Theme", opt.mTheme);
 		// Chart Options
 		settings.setValue("ChartUplColor", opt.mChartUplColor);
@@ -254,4 +306,17 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 	}
 
 	settings.setValue("CurrentViews", QStringList(mViews.keys()));
+}
+
+void QNetStats::showInterfaceNotification(const QString &message,
+		QSystemTrayIcon::MessageIcon icon, int milliseconds) {
+	// Notifications remain independent of either interface icon switch.
+	QSystemTrayIcon *target = mBackupTrayIcon;
+	for (auto *tray : findChildren<QSystemTrayIcon *>()) {
+		if (tray->isVisible()) {
+			target = tray;
+			break;
+		}
+	}
+	target->showMessage(programName, message, icon, milliseconds);
 }

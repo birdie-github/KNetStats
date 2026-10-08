@@ -4,6 +4,7 @@
 #include <QString>
 #include <QMap>
 #include <QIcon>
+#include <QFont>
 
 #include "ui_configurebase.h"
 
@@ -12,6 +13,14 @@ struct ViewOptions {
 	int mUpdateInterval;
 	bool mMonitoring;
 	bool mNotifications;
+	bool mDisplayTrayIcon;
+	bool mDisplayTextStatistics;
+	int mTextDigit;
+	int mTextDigitPosition;
+	QString mTextDigitColor;
+	QString mTextColor;
+	QString mTextBackgroundColor;
+	QFont mTextFont;
 	// icon view
 	int mTheme;
 	// chart view
@@ -24,6 +33,11 @@ struct ViewOptions {
 typedef QMap<QString, ViewOptions> OptionsMap;
 
 class QShowEvent;
+class QGroupBox;
+class QComboBox;
+class ColorButton;
+class QPushButton;
+class QLabel;
 
 class Configure : public QDialog, public Ui::ConfigureBase {
 Q_OBJECT
@@ -45,6 +59,20 @@ protected slots:
 
 private:
 	void storeCurrentOptions();
+	void setupTextStatisticsControls();
+	void updateTextStatisticsControls();
+	void updateTextStatisticsPreview();
+	QGroupBox *mTextStatisticsGroup;
+	QComboBox *mTextDigit;
+	QComboBox *mTextDigitPosition;
+	ColorButton *mTextDigitColor;
+	ColorButton *mTextColor;
+	ColorButton *mTextBackgroundColor;
+	QPushButton *mTextFontButton;
+	QLabel *mTextPreview16;
+	QLabel *mTextPreview22;
+	QFont mSelectedTextFont;
+	bool mLoadingOptions = false;
 	QString mCurrentItem;
 	OptionsMap mConfig;
 	QIcon mInterfaceIcon;

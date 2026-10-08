@@ -8,6 +8,7 @@
 class QNetStatsView;
 class QListWidget;
 class QPushButton;
+class QMenu;
 
 class QNetStats : public QDialog {
 Q_OBJECT
@@ -19,6 +20,8 @@ public:
 	static void readInterfaceConfig(const QString &ifName, ViewOptions *opts);
 
 	void checkTrayIconsAvailable();
+	void showInterfaceNotification(const QString &message,
+		QSystemTrayIcon::MessageIcon icon, int milliseconds);
 
 public slots:
 
@@ -30,6 +33,7 @@ public slots:
 private:
 	typedef QHash<QString, QNetStatsView *> TrayIconMap;
 	QSystemTrayIcon *mBackupTrayIcon;
+	QMenu *mBackupStatisticsMenu;
 	TrayIconMap mViews;
 	Configure *mConfigure;
 	QDialog *mFallbackWindow;

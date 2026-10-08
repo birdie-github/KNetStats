@@ -5,6 +5,13 @@
 #include <QSignalBlocker>
 #include <QShowEvent>
 #include <QStringList>
+#include <QGroupBox>
+#include <QFormLayout>
+#include <QHBoxLayout>
+#include <QFontDialog>
+#include <QStandardItemModel>
+#include <QSet>
+#include "textstatistics.h"
 
 #include "configure.h"
 #include "qnetstats.h"
@@ -15,6 +22,7 @@ Configure::Configure(QWidget *parent)
 		: QDialog(parent), Ui::ConfigureBase(), mInterfaceIcon(":/img/icon_pci.png") {
 	setupUi(this);
 	mInterfaces->setViewMode(QListWidget::ListMode);
+	setupTextStatisticsControls();
 
 	refreshInterfaces();
 	connect(this->mRefreshBtn, &QPushButton::clicked, this, &Configure::refreshInterfaces);
@@ -86,6 +94,14 @@ void Configure::storeCurrentOptions() {
 	ViewOptions &view = mConfig[mCurrentItem];
 	view.mMonitoring = mMonitoringInterface->isChecked();
 	view.mNotifications = mDisplayNotifications->isChecked();
+	view.mDisplayTrayIcon = mDisplayTrayIcon->isChecked();
+	view.mDisplayTextStatistics = mTextStatisticsGroup->isChecked();
+	view.mTextDigit = mTextDigit->currentIndex();
+	view.mTextDigitPosition = mTextDigitPosition->currentIndex();
+	view.mTextDigitColor = mTextDigitColor->color().name();
+	view.mTextColor = mTextColor->color().name();
+	view.mTextBackgroundColor = mTextBackgroundColor->color().name();
+	view.mTextFont = mSelectedTextFont;
 	view.mUpdateInterval = mUpdateInterval->value();
 	view.mTheme = mTheme->currentIndex();
 	view.mChartUplColor = mChartUplColor->color().name();
@@ -98,6 +114,7 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	storeCurrentOptions();
 	mConfigurationGroup->setEnabled(item != nullptr);
 	mAppearanceGroup->setEnabled(item != nullptr);
+	mTextStatisticsGroup->setEnabled(item != nullptr);
 	if (!item) {
 		mCurrentItem.clear();
 		return;
@@ -105,11 +122,21 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	const QString interface = item->data(Qt::UserRole).toString();
 	if (interface == mCurrentItem)
 		return;
+	mLoadingOptions = true;
 	// Load the new interface options
 	ViewOptions &view = mConfig[interface];
 	// General options
 	mMonitoringInterface->setChecked(view.mMonitoring);
 	mDisplayNotifications->setChecked(view.mNotifications);
+	mDisplayTrayIcon->setChecked(view.mDisplayTrayIcon);
+	mTextStatisticsGroup->setChecked(view.mDisplayTextStatistics);
+	mTextDigit->setCurrentIndex(view.mTextDigit);
+	mTextDigitPosition->setCurrentIndex(view.mTextDigitPosition);
+	mTextDigitColor->setColor(QColor(view.mTextDigitColor));
+	mTextColor->setColor(QColor(view.mTextColor));
+	mTextBackgroundColor->setColor(QColor(view.mTextBackgroundColor));
+	mSelectedTextFont = view.mTextFont;
+	mTextFontButton->setText(mSelectedTextFont.family());
 	mUpdateInterval->setValue(view.mUpdateInterval);
 	mTheme->setCurrentIndex(view.mTheme);
 	// Chart Options
@@ -120,11 +147,26 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	mCurrentItem = interface;
 
 	changeTheme(view.mTheme);
+	mLoadingOptions = false;
+	updateTextStatisticsControls();
 }
 
 bool Configure::canSaveConfig() {
 	// update the options
 	storeCurrentOptions();
+
+	QMap<int, QString> digits;
+	for (auto it = mConfig.constBegin(); it != mConfig.constEnd(); ++it) {
+		const auto &view = it.value();
+		if (!view.mMonitoring || !view.mDisplayTextStatistics)
+			continue;
+		if (view.mTextDigit < 0 || view.mTextDigit > 9 || digits.contains(view.mTextDigit)) {
+			QMessageBox::warning(this, tr("Text Statistics"),
+				tr("Every monitored text icon needs a different digit from 0 to 9."));
+			return false;
+		}
+		digits.insert(view.mTextDigit, it.key());
+	}
 
 	bool ok = false;
 	for (OptionsMap::ConstIterator i = mConfig.begin(); i != mConfig.end(); ++i)
@@ -150,4 +192,92 @@ void Configure::changeTheme(int theme) {
 	mIconTx->setPixmap(QPixmap(":/img/theme" + QString::number(theme) + "_tx.png"));
 	mIconRx->setPixmap(QPixmap(":/img/theme" + QString::number(theme) + "_rx.png"));
 	mIconBoth->setPixmap(QPixmap(":/img/theme" + QString::number(theme) + "_both.png"));
+}
+
+void Configure::setupTextStatisticsControls() {
+	mTextStatisticsGroup = new QGroupBox(tr("Display Text Statistics"), this);
+	mTextStatisticsGroup->setCheckable(true);
+	mTextStatisticsGroup->setChecked(false);
+	auto *form = new QFormLayout(mTextStatisticsGroup);
+	mTextDigit = new QComboBox(mTextStatisticsGroup);
+	for (int digit = 0; digit <= 9; ++digit)
+		mTextDigit->addItem(QString::number(digit));
+	form->addRow(tr("Interface digit:"), mTextDigit);
+	mTextDigitPosition = new QComboBox(mTextStatisticsGroup);
+	mTextDigitPosition->addItems({tr("Top left"), tr("Top right"), tr("Bottom left"), tr("Bottom right")});
+	form->addRow(tr("Digit position:"), mTextDigitPosition);
+	mTextDigitColor = new ColorButton(mTextStatisticsGroup);
+	form->addRow(tr("Digit color:"), mTextDigitColor);
+	mTextColor = new ColorButton(mTextStatisticsGroup);
+	form->addRow(tr("Statistics color:"), mTextColor);
+	mTextBackgroundColor = new ColorButton(mTextStatisticsGroup);
+	form->addRow(tr("Background color:"), mTextBackgroundColor);
+	mTextFontButton = new QPushButton(tr("Choose Font"), mTextStatisticsGroup);
+	form->addRow(tr("Statistics font:"), mTextFontButton);
+	auto *previews = new QHBoxLayout;
+	previews->addWidget(new QLabel(tr("16 px:"), mTextStatisticsGroup));
+	mTextPreview16 = new QLabel(mTextStatisticsGroup);
+	previews->addWidget(mTextPreview16);
+	previews->addWidget(new QLabel(tr("22 px:"), mTextStatisticsGroup));
+	mTextPreview22 = new QLabel(mTextStatisticsGroup);
+	previews->addWidget(mTextPreview22);
+	previews->addStretch();
+	form->addRow(tr("Preview:"), previews);
+	auto *hint = new QLabel(tr("Upload above download, in bytes/s. The chosen font family and style "
+		"are fitted automatically. Digits already used by monitored text icons are unavailable."), mTextStatisticsGroup);
+	hint->setWordWrap(true);
+	form->addRow(hint);
+	gridLayout_3->addWidget(mTextStatisticsGroup, 0, 2, 2, 1);
+	connect(mTextStatisticsGroup, &QGroupBox::toggled, this, &Configure::updateTextStatisticsControls);
+	connect(mMonitoringInterface, &QCheckBox::toggled, this, &Configure::updateTextStatisticsControls);
+	connect(mTextDigit, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsControls);
+	connect(mTextDigitPosition, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsPreview);
+	for (auto *button : {mTextDigitColor, mTextColor, mTextBackgroundColor})
+		connect(button, &QPushButton::clicked, this, &Configure::updateTextStatisticsPreview);
+	connect(mTextFontButton, &QPushButton::clicked, this, [this]() {
+		bool accepted = false;
+		const QFont selected = QFontDialog::getFont(&accepted, mSelectedTextFont, this, tr("Statistics Font"));
+		if (accepted) {
+			mSelectedTextFont = selected;
+			mTextFontButton->setText(selected.family());
+			updateTextStatisticsPreview();
+		}
+	});
+}
+
+void Configure::updateTextStatisticsControls() {
+	if (mLoadingOptions || mCurrentItem.isEmpty())
+		return;
+	storeCurrentOptions();
+	QSet<int> used;
+	for (auto it = mConfig.constBegin(); it != mConfig.constEnd(); ++it)
+		if (it.key() != mCurrentItem && it->mMonitoring && it->mDisplayTextStatistics)
+			used.insert(it->mTextDigit);
+	if (mMonitoringInterface->isChecked() && mTextStatisticsGroup->isChecked() && used.contains(mTextDigit->currentIndex())) {
+		int available = 0;
+		while (available < 10 && used.contains(available))
+			++available;
+		if (available == 10) {
+			const QSignalBlocker blocker(mTextStatisticsGroup);
+			mTextStatisticsGroup->setChecked(false);
+			QMessageBox::information(this, tr("Text Statistics"),
+				tr("All ten digits are in use. Disable text statistics on another interface to free one."));
+		} else {
+			mTextDigit->setCurrentIndex(available);
+		}
+	}
+	auto *model = qobject_cast<QStandardItemModel *>(mTextDigit->model());
+	for (int digit = 0; digit < 10; ++digit)
+		model->item(digit)->setEnabled(!used.contains(digit));
+	storeCurrentOptions();
+	updateTextStatisticsPreview();
+}
+
+void Configure::updateTextStatisticsPreview() {
+	if (mLoadingOptions || mCurrentItem.isEmpty())
+		return;
+	storeCurrentOptions();
+	const auto &view = mConfig[mCurrentItem];
+	mTextPreview16->setPixmap(QPixmap::fromImage(renderTextStatistics(view, "1.1M", "222K", 16)));
+	mTextPreview22->setPixmap(QPixmap::fromImage(renderTextStatistics(view, "1.1M", "222K", 22)));
 }

@@ -20,6 +20,8 @@
 #include "qnetstatsview.h"
 #include "qnetstats.h"
 #include "statistics.h"
+#include "textstatistics.h"
+#include <QLocale>
 
 extern const char *programName;
 
@@ -60,6 +62,7 @@ QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 	mTimer = new QTimer(this);
 	mStatistics = new Statistics(this);
 	mTrayIcon = new QSystemTrayIcon(this);
+	mTextTrayIcon = new QSystemTrayIcon(this);
 	mContextMenu = new QMenu(this);
 	mContextMenu->addAction("Configure Interfaces", parent, &QNetStats::showConfigure);
 	mContextMenu->addAction("Quit QNetStats", parent, []() { QApplication::quit(); });
@@ -69,6 +72,7 @@ QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 
 	mTimer->start(mOptions.mUpdateInterval);
 	connect(mTrayIcon, &QSystemTrayIcon::activated, this, &QNetStatsView::iconActivated);
+	connect(mTextTrayIcon, &QSystemTrayIcon::activated, this, &QNetStatsView::iconActivated);
 }
 
 void QNetStatsView::setupView() {
@@ -78,7 +82,7 @@ void QNetStatsView::setupView() {
 	}
 
 	mCarrier = interfaceHasCarrier();
-	mTrayIcon->setVisible(mCarrier);
+	mTrayIcon->setVisible(mCarrier && mOptions.mDisplayTrayIcon);
 	connect(mTimer, &QTimer::timeout, this, &QNetStatsView::updateStats);
 }
 
@@ -92,27 +96,31 @@ void QNetStatsView::setupTrayIcon() {
 	mTrayIcon->setToolTip(QString("Monitoring %1").arg(displayName()));
 	mTrayIcon->setContextMenu(mContextMenu);
 	mTrayIcon->setIcon(*mCurrentIcon);
+	mTrayIcon->setVisible(mOptions.mDisplayTrayIcon && mCarrier && interfaceIsValid());
+	mTextTrayIcon->setContextMenu(mContextMenu);
+	updateTextTrayIcon(true);
+	mTextTrayIcon->setVisible(mOptions.mDisplayTextStatistics);
 }
 
 void QNetStatsView::checkMissingInterface() {
 	if (interfaceIsValid()) {
 		mCarrier = interfaceHasCarrier();
-		mTrayIcon->setVisible(mCarrier);
+		mTrayIcon->setVisible(mCarrier && mOptions.mDisplayTrayIcon);
 		if (mOptions.mNotifications)
-			mTrayIcon->showMessage(programName, QString("Interface %1 reappeared!").arg(displayName()),
+			mParent->showInterfaceNotification(QString("Interface %1 reappeared!").arg(displayName()),
 								   QSystemTrayIcon::Information,
 								   3000);
 		disconnect(mTimer, &QTimer::timeout, this, &QNetStatsView::checkMissingInterface);
 		connect(mTimer, &QTimer::timeout, this, &QNetStatsView::updateStats);
+		mParent->checkTrayIconsAvailable();
 	}
-	mParent->checkTrayIconsAvailable();
 }
 
 void QNetStatsView::interfaceMissing() {
 	mInterfaceIdentity = 0;
 	resetSampling();
 	if (mOptions.mNotifications)
-		mTrayIcon->showMessage(programName, QString("Interface %1 disappeared!").arg(displayName()),
+		mParent->showInterfaceNotification(QString("Interface %1 disappeared!").arg(displayName()),
 							   QSystemTrayIcon::Information,
 							   3000);
 	mTrayIcon->hide();
@@ -139,7 +147,7 @@ void QNetStatsView::updateStats() {
 		if (mCarrier) {
 			mCarrier = false;
 			if (mOptions.mNotifications)
-				mTrayIcon->showMessage(programName, QString("Interface %1 is down!").arg(displayName()),
+				mParent->showInterfaceNotification(QString("Interface %1 is down!").arg(displayName()),
 									   QSystemTrayIcon::Information,
 									   3000);
 		}
@@ -151,12 +159,12 @@ void QNetStatsView::updateStats() {
 	}
 	const bool carrierWasDown = !mCarrier;
 	mCarrier = true;
-	if (!mTrayIcon->isVisible()) {
+	if (mOptions.mDisplayTrayIcon && !mTrayIcon->isVisible()) {
 		mTrayIcon->show();
 		mParent->checkTrayIconsAvailable();
 	}
 	if (carrierWasDown && mOptions.mNotifications)
-		mTrayIcon->showMessage(programName, QString("Interface %1 is up!").arg(displayName()),
+		mParent->showInterfaceNotification(QString("Interface %1 is up!").arg(displayName()),
 							   QSystemTrayIcon::Information,
 							   3000);
 
@@ -233,6 +241,8 @@ void QNetStatsView::updateStats() {
 	mBTx = btx;
 	mPRx = prx;
 	mPTx = ptx;
+	mRatesAvailable = true;
+	updateTextTrayIcon();
 }
 
 QString QNetStatsView::displayName() const {
@@ -305,6 +315,7 @@ bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &
 #endif
 
 void QNetStatsView::resetSampling() {
+	mRatesAvailable = false;
 	mSampleClock.invalidate();
 	mDeltaBufferPtr = 0;
 	std::fill_n(mSampleSeconds, SPEED_BUFFER_SIZE, 0.0);
@@ -315,6 +326,7 @@ void QNetStatsView::resetSampling() {
 	mSpeedHistoryRx[mSpeedHistoryPtr] = 0.0;
 	mSpeedHistoryTx[mSpeedHistoryPtr] = 0.0;
 	calcMaxSpeed();
+	updateTextTrayIcon();
 }
 
 void QNetStatsView::showStatistics() {
@@ -330,4 +342,24 @@ void QNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
 		else
 			showStatistics();
 	}
+}
+
+void QNetStatsView::updateTextTrayIcon(bool force) {
+	if (!mOptions.mDisplayTextStatistics)
+		return;
+	const double upload = calcSpeed(mDeltaBufferTx);
+	const double download = calcSpeed(mDeltaBufferRx);
+	const QString upl = mRatesAvailable ? formatShortRate(upload) : QString("-");
+	const QString dld = mRatesAvailable ? formatShortRate(download) : QString("-");
+	if (force || upl != mLastUpload || dld != mLastDownload) {
+		mTextTrayIcon->setIcon(textStatisticsIcon(mOptions, upl, dld));
+		mLastUpload = upl;
+		mLastDownload = dld;
+	}
+	const QString rates = mRatesAvailable
+		? tr("Upload: %1 bytes/s\nDownload: %2 bytes/s")
+			.arg(QLocale().toString(upload, 'f', 1), QLocale().toString(download, 'f', 1))
+		: tr("Traffic statistics unavailable");
+	mTextTrayIcon->setToolTip(QString("%1: %2\n%3")
+		.arg(mOptions.mTextDigit).arg(displayName(), rates));
 }
