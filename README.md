@@ -99,7 +99,11 @@ that kit's compiler and `windeployqt`. The `AUTO` selection works on Windows too
 
 The compiler must match the Qt kit; an MSVC Qt kit cannot be used with MinGW.
 `windeployqt` copies the Qt libraries and plugins needed to run the executable.
-Windows CI artifacts will be added separately.
+The Windows CI workflow builds an x64 Qt6 package on pushes and pull requests
+to `main`, and can also be run manually. Download the
+`QNetStats-Windows-x64-Qt6-<commit>` artifact from the workflow run, extract the
+entire archive, and run `qnetstats.exe`. Keep the DLLs and plugin folders beside
+the executable. Artifacts are retained for 14 days.
 
 On Windows, traffic counters and connection status come from the system IP
 Helper API. Adapter names shown in the UI are friendly names such as Wi-Fi or
