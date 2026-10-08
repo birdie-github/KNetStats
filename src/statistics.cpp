@@ -6,6 +6,8 @@
 #include <QStringList>
 #include <QTimer>
 #include <QMenu>
+#include <QShowEvent>
+#include <QHideEvent>
 
 Statistics::Statistics(KNetStatsView *parent)
 		: QDialog(parent), Ui::StatisticsBase(), mParent(parent) {
@@ -76,12 +78,21 @@ void Statistics::updateTimerInterval() {
 	mTimer->setInterval(mParent->updateInterval());
 }
 
-void Statistics::showWindow() {
+void Statistics::showEvent(QShowEvent *event) {
+	updateStatistics();
 	mTimer->start(mParent->updateInterval());
+	QDialog::showEvent(event);
+}
+
+void Statistics::hideEvent(QHideEvent *event) {
+	mTimer->stop();
+	QDialog::hideEvent(event);
+}
+
+void Statistics::showWindow() {
 	this->show();
 }
 
 void Statistics::hideWindow() {
-	mTimer->stop();
 	this->hide();
 }

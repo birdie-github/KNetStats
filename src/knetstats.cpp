@@ -51,11 +51,13 @@ void KNetStats::setup() {
 	}
 
 	connect(mConfigure->mOk, &QPushButton::clicked, this, [this]() {
-		configApply();
-		mConfigure->hide();
+		if (mConfigure->canSaveConfig()) {
+			saveConfig(mConfigure->options());
+			mConfigure->accept();
+		}
 	});
 	connect(mConfigure->mApply, &QPushButton::clicked, this, &KNetStats::configApply);
-	connect(mConfigure->mCancel, &QPushButton::clicked, this, [this]() { mConfigure->hide(); });
+	connect(mConfigure->mCancel, &QPushButton::clicked, mConfigure, &QDialog::reject);
 }
 
 void KNetStats::setupBackupTrayIcon() {
@@ -66,7 +68,9 @@ void KNetStats::setupBackupTrayIcon() {
 	mContextMenu->addAction("Quit KNetStats", this, []() { QApplication::quit(); });
 	mBackupTrayIcon->setContextMenu(mContextMenu);
 
-	connect(mBackupTrayIcon, &QSystemTrayIcon::activated, this, [this]() {
+	connect(mBackupTrayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
+		if (reason != QSystemTrayIcon::Trigger)
+			return;
 		if (mConfigure->isVisible()) {
 			mConfigure->hide();
 			return;

@@ -4,12 +4,18 @@
 #include "ui_statisticsbase.h"
 
 class KNetStatsView;
+class QShowEvent;
+class QHideEvent;
 
 class Statistics : public QDialog, public Ui::StatisticsBase {
 Q_OBJECT
 public:
 	explicit Statistics(KNetStatsView *parent);
 	void updateTimerInterval();
+
+protected:
+	void showEvent(QShowEvent *event) override;
+	void hideEvent(QHideEvent *event) override;
 
 private:
 	QTimer *mTimer;

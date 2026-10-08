@@ -25,6 +25,8 @@ struct ViewOptions {
 
 typedef QMap<QString, ViewOptions> OptionsMap;
 
+class QShowEvent;
+
 class Configure : public QDialog, public Ui::ConfigureBase {
 Q_OBJECT
 public:
@@ -34,6 +36,9 @@ public:
 
 	const OptionsMap &options() const { return mConfig; }
 
+protected:
+	void showEvent(QShowEvent *event) override;
+
 protected slots:
 
 	void changeInterface(QListWidgetItem *item);
@@ -41,6 +46,7 @@ protected slots:
 	void changeTheme(int theme);
 
 private:
+	void storeCurrentOptions();
 	QString mCurrentItem;
 	OptionsMap mConfig;
 	QIcon *mInterfaceIcon;

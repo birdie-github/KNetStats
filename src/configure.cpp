@@ -1,6 +1,9 @@
 #include <QListWidget>
 #include <QNetworkInterface>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <QShowEvent>
+#include <QStringList>
 
 #include "configure.h"
 #include "knetstats.h"
@@ -14,53 +17,85 @@ Configure::Configure(QWidget *parent) : QDialog(parent), Ui::ConfigureBase() {
 
 	refreshInterfaces();
 	connect(this->mRefreshBtn, &QPushButton::clicked, this, &Configure::refreshInterfaces);
-	connect(mInterfaces, &QListWidget::itemClicked, this, &Configure::changeInterface);
+	connect(mInterfaces, &QListWidget::currentItemChanged, this, &Configure::changeInterface);
 	connect(mTheme, qOverload<int>(&QComboBox::activated), this, &Configure::changeTheme);
 }
 
+void Configure::showEvent(QShowEvent *event) {
+	if (event->spontaneous()) {
+		QDialog::showEvent(event);
+		return;
+	}
+	const QString selected = mCurrentItem;
+	mCurrentItem.clear();
+	mConfig.clear();
+	QSettings settings;
+	const QStringList monitored = settings.value("CurrentViews", QStringList()).toStringList();
+	for (const QString &name : monitored)
+		KNetStats::readInterfaceConfig(name, &mConfig[name]);
+	refreshInterfaces();
+	const auto matches = mInterfaces->findItems(selected, Qt::MatchExactly);
+	if (!matches.isEmpty())
+		mInterfaces->setCurrentItem(matches.first());
+	QDialog::showEvent(event);
+}
+
 void Configure::refreshInterfaces() {
-	int currentRow = mInterfaces->currentRow();
-
-	while (mInterfaces->count() > 0) {
-		auto interface = mInterfaces->takeItem(0);
-		delete interface;
+	storeCurrentOptions();
+	const QString selected = mCurrentItem;
+	QStringList available;
+	const auto interfaces = QNetworkInterface::allInterfaces();
+	for (const auto &interface : interfaces) {
+		const QString name = interface.name();
+		available.append(name);
+		if (!mConfig.contains(name))
+			KNetStats::readInterfaceConfig(name, &mConfig[name]);
 	}
 
-	auto interfaces = QNetworkInterface::allInterfaces();
-	for (auto &it: interfaces) {
-		auto *item = new QListWidgetItem(*mInterfaceIcon, it.name());
-		mInterfaces->insertItem(it.index(), item);
-		KNetStats::readInterfaceConfig(it.name(), &mConfig[it.name()]);
+	QListWidgetItem *current = nullptr;
+	{
+		const QSignalBlocker blocker(mInterfaces);
+		mInterfaces->clear();
+		for (auto it = mConfig.constBegin(); it != mConfig.constEnd(); ++it) {
+			auto *item = new QListWidgetItem(*mInterfaceIcon, it.key(), mInterfaces);
+			if (!available.contains(it.key())) {
+				item->setIcon(QIcon(":/img/interfaces_missing.png"));
+				item->setToolTip(tr("Interface currently unavailable"));
+			}
+			if (it.key() == selected)
+				current = item;
+		}
+		if (!current)
+			current = mInterfaces->item(0);
+		mInterfaces->setCurrentItem(current);
 	}
+	mCurrentItem.clear();
+	changeInterface(current);
+}
 
-	auto *item = mInterfaces->item(currentRow);
-	if (!item)
-		item = mInterfaces->item(0);
-	mInterfaces->setCurrentItem(item);
-	changeInterface(item);
+void Configure::storeCurrentOptions() {
+	if (mCurrentItem.isEmpty() || !mConfig.contains(mCurrentItem))
+		return;
+	ViewOptions &view = mConfig[mCurrentItem];
+	view.mMonitoring = mMonitoringInterface->isChecked();
+	view.mNotifications = mDisplayNotifications->isChecked();
+	view.mUpdateInterval = mUpdateInterval->value();
+	view.mTheme = mTheme->currentIndex();
+	view.mChartUplColor = mChartUplColor->color().name();
+	view.mChartDldColor = mChartDldColor->color().name();
+	view.mChartBgColor = mChartBgColor->color().name();
+	view.mChartTransparentBackground = mChartTransparentBackground->isChecked();
 }
 
 void Configure::changeInterface(QListWidgetItem *item) {
-	if (!item)
+	storeCurrentOptions();
+	mConfigurationGroup->setEnabled(item != nullptr);
+	mAppearanceGroup->setEnabled(item != nullptr);
+	if (!item) {
+		mCurrentItem.clear();
 		return;
-	QString interface = item->text();
-
-	if (!mCurrentItem.isEmpty()) {
-		// Save the previous options
-		ViewOptions &oldview = mConfig[mCurrentItem];
-		// general options
-		oldview.mMonitoring = mMonitoringInterface->isChecked();
-		oldview.mNotifications = mDisplayNotifications->isChecked();
-		oldview.mUpdateInterval = mUpdateInterval->value();
-		// icon view
-		oldview.mTheme = mTheme->currentIndex();
-		// chart view
-		oldview.mChartUplColor = mChartUplColor->color().name();
-		oldview.mChartDldColor = mChartDldColor->color().name();
-		oldview.mChartBgColor = mChartBgColor->color().name();
-		oldview.mChartTransparentBackground = mChartTransparentBackground->isChecked();
 	}
-
+	const QString interface = item->text();
 	if (interface == mCurrentItem)
 		return;
 	// Load the new interface options
@@ -82,7 +117,7 @@ void Configure::changeInterface(QListWidgetItem *item) {
 
 bool Configure::canSaveConfig() {
 	// update the options
-	changeInterface(mInterfaces->item(mInterfaces->currentRow()));
+	storeCurrentOptions();
 
 	bool ok = false;
 	for (OptionsMap::ConstIterator i = mConfig.begin(); i != mConfig.end(); ++i)

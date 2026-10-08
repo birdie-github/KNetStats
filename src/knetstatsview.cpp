@@ -211,7 +211,5 @@ void KNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
 			mStatistics->hideWindow();
 		else
 			mStatistics->showWindow();
-	} else if (reason == QSystemTrayIcon::ActivationReason::Context) {
-		mContextMenu->exec();
 	}
 }
