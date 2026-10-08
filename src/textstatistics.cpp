@@ -96,14 +96,7 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
     const bool right = options.mTextDigitPosition == 1 || options.mTextDigitPosition == 3;
     const bool bottom = options.mTextDigitPosition >= 2;
     const QPoint origin(right ? size - 3 * scale : 0, bottom ? size - 5 * scale : 0);
-    // Only the top row reserves space for a top-corner identifier.
-    // Download uses the full width, including either bottom corner.
-    if (options.mTextShowDigit && !bottom) {
-        if (right)
-            uploadArea.setRight(size - 4 * scale - 1);
-        else
-            uploadArea.setLeft(4 * scale);
-    }
+    // Both traffic rows use the full icon width, regardless of digit position.
 
     const int digit = std::clamp(options.mTextDigit, 0, 9);
     if (options.mTextShowDigit)
