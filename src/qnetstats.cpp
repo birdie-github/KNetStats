@@ -15,10 +15,61 @@
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QFontDatabase>
+#include <QColor>
 #include <QSet>
 #include <algorithm>
 
 extern const char *programName;
+
+namespace {
+ViewOptions defaultInterfaceOptions(const QString &name) {
+	int theme = name.startsWith("wlan") ? 3 : 0;
+#ifdef Q_OS_WIN
+	if (QNetworkInterface::interfaceFromName(name).type() == QNetworkInterface::Wifi)
+		theme = 3;
+#endif
+	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	font.setBold(true);
+	ViewOptions defaults;
+	defaults.mUpdateInterval = 500;
+	defaults.mMonitoring = true;
+	defaults.mNotifications = true;
+	defaults.mDisplayTrayIcon = true;
+	defaults.mDisplayTextStatistics = false;
+	defaults.mTextDigit = 0;
+	defaults.mTextDigitPosition = 0;
+	defaults.mTextShowDigit = true;
+	defaults.mTextShadow = false;
+	defaults.mTextDigitColor = "#ffd700";
+	defaults.mTextUploadColor = "#FF0000";
+	defaults.mTextDownloadColor = "#00FF00";
+	defaults.mTextBackgroundColor = "#202020";
+	defaults.mTextTransparentBackground = false;
+	defaults.mTextFont = font;
+	defaults.mTheme = theme;
+	defaults.mChartUplColor = "#FF0000";
+	defaults.mChartDldColor = "#00FF00";
+	defaults.mChartBgColor = "#000000";
+	defaults.mChartTransparentBackground = false;
+	return defaults;
+}
+
+template<typename T>
+void saveOverride(QSettings &settings, const char *key, const T &value, const T &defaultValue) {
+	if (value == defaultValue)
+		settings.remove(key);
+	else
+		settings.setValue(key, QVariant::fromValue(value));
+}
+
+void saveColorOverride(QSettings &settings, const char *key,
+		const QString &value, const QString &defaultValue) {
+	if (QColor(value) == QColor(defaultValue))
+		settings.remove(key);
+	else
+		settings.setValue(key, value);
+}
+}
 
 QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 	// read the current views from config file
@@ -38,9 +89,9 @@ QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 			for (digit = 0; digit < 10 && digits.contains(digit); ++digit) {}
 			settings.beginGroup(name);
 			if (digit < 10)
-				settings.setValue("TextStatisticsDigit", digit);
+				saveOverride(settings, "TextStatisticsDigit", digit, defaultInterfaceOptions(name).mTextDigit);
 			else
-				settings.setValue("DisplayTextStatistics", false);
+				saveOverride(settings, "DisplayTextStatistics", false, defaultInterfaceOptions(name).mDisplayTextStatistics);
 			settings.endGroup();
 		}
 		if (digit < 10)
@@ -224,39 +275,30 @@ QString QNetStats::interfaceDisplayName(const QString &name) {
 
 void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	QSettings settings;
-	int defaultTheme = ifName.startsWith("wlan") ? 3 : 0;
-#ifdef Q_OS_WIN
-	if (QNetworkInterface::interfaceFromName(ifName).type() == QNetworkInterface::Wifi)
-		defaultTheme = 3;
-#endif
-
+	const ViewOptions defaults = defaultInterfaceOptions(ifName);
 	settings.beginGroup(ifName);
-	// General Settings
-	opts->mUpdateInterval = settings.value("UpdateInterval", 500).toInt();
+	opts->mUpdateInterval = settings.value("UpdateInterval", defaults.mUpdateInterval).toInt();
 	if (opts->mUpdateInterval <= 0)
-		opts->mUpdateInterval = 500;
-	opts->mMonitoring = settings.value("Monitoring", true).toBool();
-	opts->mNotifications = settings.value("DisplayNotifications", true).toBool();
-	opts->mDisplayTrayIcon = settings.value("DisplayTrayIcon", true).toBool();
-	opts->mDisplayTextStatistics = settings.value("DisplayTextStatistics", false).toBool();
-	opts->mTextDigit = std::clamp(settings.value("TextStatisticsDigit", 0).toInt(), 0, 9);
-	opts->mTextDigitPosition = std::clamp(settings.value("TextStatisticsDigitPosition", 0).toInt(), 0, 3);
-	opts->mTextShowDigit = settings.value("TextStatisticsShowDigit", true).toBool();
-	opts->mTextShadow = settings.value("TextStatisticsShadow", false).toBool();
-	opts->mTextDigitColor = settings.value("TextStatisticsDigitColor", "#ffd700").toString();
-	opts->mTextUploadColor = settings.value("TextStatisticsUploadColor", "#FF0000").toString();
-	opts->mTextDownloadColor = settings.value("TextStatisticsDownloadColor", "#00FF00").toString();
-	opts->mTextBackgroundColor = settings.value("TextStatisticsBackgroundColor", "#202020").toString();
-	opts->mTextTransparentBackground = settings.value("TextStatisticsTransparentBackground", false).toBool();
-	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-	font.setBold(true);
-	opts->mTextFont = settings.value("TextStatisticsFont", QVariant::fromValue(font)).value<QFont>();
-	opts->mTheme = settings.value("Theme", defaultTheme).toInt();
-	// Graph Settings
-	opts->mChartUplColor = settings.value("ChartUplColor", "#FF0000").toString();
-	opts->mChartDldColor = settings.value("ChartDldColor", "#00FF00").toString();
-	opts->mChartBgColor = settings.value("ChartBgColor", "#000000").toString();
-	opts->mChartTransparentBackground = settings.value("ChartUseTransparentBackground", false).toBool();
+		opts->mUpdateInterval = defaults.mUpdateInterval;
+	opts->mMonitoring = settings.value("Monitoring", defaults.mMonitoring).toBool();
+	opts->mNotifications = settings.value("DisplayNotifications", defaults.mNotifications).toBool();
+	opts->mDisplayTrayIcon = settings.value("DisplayTrayIcon", defaults.mDisplayTrayIcon).toBool();
+	opts->mDisplayTextStatistics = settings.value("DisplayTextStatistics", defaults.mDisplayTextStatistics).toBool();
+	opts->mTextDigit = std::clamp(settings.value("TextStatisticsDigit", defaults.mTextDigit).toInt(), 0, 9);
+	opts->mTextDigitPosition = std::clamp(settings.value("TextStatisticsDigitPosition", defaults.mTextDigitPosition).toInt(), 0, 3);
+	opts->mTextShowDigit = settings.value("TextStatisticsShowDigit", defaults.mTextShowDigit).toBool();
+	opts->mTextShadow = settings.value("TextStatisticsShadow", defaults.mTextShadow).toBool();
+	opts->mTextDigitColor = settings.value("TextStatisticsDigitColor", defaults.mTextDigitColor).toString();
+	opts->mTextUploadColor = settings.value("TextStatisticsUploadColor", defaults.mTextUploadColor).toString();
+	opts->mTextDownloadColor = settings.value("TextStatisticsDownloadColor", defaults.mTextDownloadColor).toString();
+	opts->mTextBackgroundColor = settings.value("TextStatisticsBackgroundColor", defaults.mTextBackgroundColor).toString();
+	opts->mTextTransparentBackground = settings.value("TextStatisticsTransparentBackground", defaults.mTextTransparentBackground).toBool();
+	opts->mTextFont = settings.value("TextStatisticsFont", QVariant::fromValue(defaults.mTextFont)).value<QFont>();
+	opts->mTheme = settings.value("Theme", defaults.mTheme).toInt();
+	opts->mChartUplColor = settings.value("ChartUplColor", defaults.mChartUplColor).toString();
+	opts->mChartDldColor = settings.value("ChartDldColor", defaults.mChartDldColor).toString();
+	opts->mChartBgColor = settings.value("ChartBgColor", defaults.mChartBgColor).toString();
+	opts->mChartTransparentBackground = settings.value("ChartUseTransparentBackground", defaults.mChartTransparentBackground).toBool();
 	settings.endGroup();
 }
 
@@ -272,31 +314,30 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 		TrayIconMap::Iterator trayIcon = mViews.find(i.key());
 		const ViewOptions &opt = i.value();
 
+		const ViewOptions defaults = defaultInterfaceOptions(i.key());
 		settings.beginGroup(i.key());
-		// General Options
-		settings.setValue("UpdateInterval", opt.mUpdateInterval);
-		settings.setValue("Monitoring", opt.mMonitoring);
-		settings.setValue("DisplayNotifications", opt.mNotifications);
-		settings.setValue("DisplayTrayIcon", opt.mDisplayTrayIcon);
-		settings.setValue("DisplayTextStatistics", opt.mDisplayTextStatistics);
-		settings.setValue("TextStatisticsDigit", opt.mTextDigit);
-		settings.setValue("TextStatisticsDigitPosition", opt.mTextDigitPosition);
-		settings.setValue("TextStatisticsShowDigit", opt.mTextShowDigit);
+		saveOverride(settings, "UpdateInterval", opt.mUpdateInterval, defaults.mUpdateInterval);
+		saveOverride(settings, "Monitoring", opt.mMonitoring, defaults.mMonitoring);
+		saveOverride(settings, "DisplayNotifications", opt.mNotifications, defaults.mNotifications);
+		saveOverride(settings, "DisplayTrayIcon", opt.mDisplayTrayIcon, defaults.mDisplayTrayIcon);
+		saveOverride(settings, "DisplayTextStatistics", opt.mDisplayTextStatistics, defaults.mDisplayTextStatistics);
+		saveOverride(settings, "TextStatisticsDigit", opt.mTextDigit, defaults.mTextDigit);
+		saveOverride(settings, "TextStatisticsDigitPosition", opt.mTextDigitPosition, defaults.mTextDigitPosition);
+		saveOverride(settings, "TextStatisticsShowDigit", opt.mTextShowDigit, defaults.mTextShowDigit);
+		saveOverride(settings, "TextStatisticsShadow", opt.mTextShadow, defaults.mTextShadow);
+		saveColorOverride(settings, "TextStatisticsDigitColor", opt.mTextDigitColor, defaults.mTextDigitColor);
+		saveColorOverride(settings, "TextStatisticsUploadColor", opt.mTextUploadColor, defaults.mTextUploadColor);
+		saveColorOverride(settings, "TextStatisticsDownloadColor", opt.mTextDownloadColor, defaults.mTextDownloadColor);
+		saveColorOverride(settings, "TextStatisticsBackgroundColor", opt.mTextBackgroundColor, defaults.mTextBackgroundColor);
+		saveOverride(settings, "TextStatisticsTransparentBackground", opt.mTextTransparentBackground, defaults.mTextTransparentBackground);
+		saveOverride(settings, "TextStatisticsFont", opt.mTextFont, defaults.mTextFont);
+		saveOverride(settings, "Theme", opt.mTheme, defaults.mTheme);
+		saveColorOverride(settings, "ChartUplColor", opt.mChartUplColor, defaults.mChartUplColor);
+		saveColorOverride(settings, "ChartDldColor", opt.mChartDldColor, defaults.mChartDldColor);
+		saveColorOverride(settings, "ChartBgColor", opt.mChartBgColor, defaults.mChartBgColor);
+		saveOverride(settings, "ChartUseTransparentBackground", opt.mChartTransparentBackground, defaults.mChartTransparentBackground);
 		settings.remove("TextStatisticsDigitMode");
-		settings.setValue("TextStatisticsShadow", opt.mTextShadow);
-		settings.setValue("TextStatisticsDigitColor", opt.mTextDigitColor);
 		settings.remove("TextStatisticsColor");
-		settings.setValue("TextStatisticsUploadColor", opt.mTextUploadColor);
-		settings.setValue("TextStatisticsDownloadColor", opt.mTextDownloadColor);
-		settings.setValue("TextStatisticsBackgroundColor", opt.mTextBackgroundColor);
-		settings.setValue("TextStatisticsTransparentBackground", opt.mTextTransparentBackground);
-		settings.setValue("TextStatisticsFont", QVariant::fromValue(opt.mTextFont));
-		settings.setValue("Theme", opt.mTheme);
-		// Chart Options
-		settings.setValue("ChartUplColor", opt.mChartUplColor);
-		settings.setValue("ChartDldColor", opt.mChartDldColor);
-		settings.setValue("ChartBgColor", opt.mChartBgColor);
-		settings.setValue("ChartUseTransparentBackground", opt.mChartTransparentBackground);
 		settings.endGroup();
 
 		if (opt.mMonitoring) {    // check if we are already monitoring this interface.

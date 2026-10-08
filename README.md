@@ -47,6 +47,14 @@ position are not saved between app sessions. Window positioning and always-on-to
 behavior depend on the window manager. Native dragging uses Qt 5.15 or newer;
 older Qt versions use manual positioning, which may be restricted on Wayland.
 
+## Settings
+
+Interface settings store only values that differ from their defaults. Apply or OK
+also removes existing default-valued entries; resetting an option to its default
+removes its override. Color comparisons ignore differences in spelling or case.
+The monitored-interface list is saved separately as application state. Omitted
+options follow the application's defaults, including future default changes.
+
 ## Screenshots:
 
 ![Statistics Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/StatisticsWindow.png)
