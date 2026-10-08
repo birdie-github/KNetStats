@@ -9,6 +9,9 @@ void Chart::paintEvent(QPaintEvent *event) {
 	QBrush brush(QColor(0x33, 0x33, 0x33), Qt::BrushStyle::CrossPattern);
 	paint.fillRect(0, 0, width(), height(), brush);
 
+	if (mBufferSize <= 0 || height() <= 1 || *mMaxSpeed <= 0.0)
+		return;
+
 	const double step = width() / double(mBufferSize);
 	const int HEIGHT = height() - 1;
 

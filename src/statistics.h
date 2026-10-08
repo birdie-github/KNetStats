@@ -9,6 +9,7 @@ class Statistics : public QDialog, public Ui::StatisticsBase {
 Q_OBJECT
 public:
 	explicit Statistics(KNetStatsView *parent);
+	void updateTimerInterval();
 
 private:
 	QTimer *mTimer;

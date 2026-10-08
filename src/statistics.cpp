@@ -20,7 +20,7 @@ Statistics::Statistics(KNetStatsView *parent)
 	this->update();
 
 	mTimer = new QTimer(this);
-	mTimer->setInterval(mParent->getViewOptions()->mUpdateInterval);
+	updateTimerInterval();
 	connect(tabWidget, &QTabWidget::tabBarClicked, this, &Statistics::updateTabSize);
 	connect(mTimer, &QTimer::timeout, this, &Statistics::updateStatistics);
 	connect(mTimer, &QTimer::timeout, chart, qOverload<>(&Chart::repaint));
@@ -70,6 +70,10 @@ void Statistics::updateTabSize(int tabIndex) {
 
 	tabWidget->widget(tabIndex)->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 	tabWidget->widget(tabIndex)->adjustSize();
+}
+
+void Statistics::updateTimerInterval() {
+	mTimer->setInterval(mParent->updateInterval());
 }
 
 void Statistics::showWindow() {

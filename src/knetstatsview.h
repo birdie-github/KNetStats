@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <linux/netdevice.h>
 #include <QSystemTrayIcon>
+#include <QElapsedTimer>
 #include <dirent.h>
 #include "configure.h"
 #include "knetstats.h"
@@ -33,7 +34,6 @@ public:
 	double mSpeedHistoryRx[HISTORY_SIZE]{};
 	double mSpeedHistoryTx[HISTORY_SIZE]{};
 	double mMaxSpeed{};
-	int mMaxSpeedAge{};
 	QString mInterface;                // Current interface
 
 	KNetStatsView(KNetStats *parent, const QString &interface);
@@ -43,7 +43,7 @@ public:
 	void updateViewOptions();
 
 	// read a value from /sys/class/net/interface/name
-	unsigned long long readInterfaceNumValue(const char *name);
+	bool readInterfaceNumValue(const char *name, unsigned long long &value);
 
 	///	The current Update Interval in miliseconds
 	inline int updateInterval() const;
@@ -54,12 +54,11 @@ public:
 	static inline double calcSpeed(const double *buffer);
 
 	inline bool interfaceIsValid() {
-		bool ret = false;
 		DIR *dir = opendir(mSysDevPath.toLatin1());
-		if (dir)
-			ret = true;
+		if (!dir)
+			return false;
 		closedir(dir);
-		return ret;
+		return true;
 	};
 
 	inline bool trayIconVisible() { return mTrayIcon->isVisible(); }
@@ -77,6 +76,9 @@ private:
 	QIcon *mCurrentIcon{};            // Current state
 	QTimer *mTimer;                    // Timer
 	bool mFirstUpdate;
+	QElapsedTimer mSampleClock;
+
+	void resetSampling();
 
 	// set up the view.
 	void setupTrayIcon();
@@ -98,20 +100,13 @@ private slots:
 };
 
 void KNetStatsView::calcMaxSpeed() {
-	double max = 0.0;
-	int ptr = mSpeedHistoryPtr;
+	mMaxSpeed = 0.0;
 	for (int i = 0; i < HISTORY_SIZE; ++i) {
-		if (mSpeedHistoryRx[i] > max) {
-			max = mSpeedHistoryRx[i];
-			ptr = i;
-		}
-		if (mSpeedHistoryTx[i] > max) {
-			max = mSpeedHistoryTx[i];
-			ptr = i;
-		}
+		if (mSpeedHistoryRx[i] > mMaxSpeed)
+			mMaxSpeed = mSpeedHistoryRx[i];
+		if (mSpeedHistoryTx[i] > mMaxSpeed)
+			mMaxSpeed = mSpeedHistoryTx[i];
 	}
-	mMaxSpeed = max;
-	mMaxSpeedAge = (mSpeedHistoryPtr > ptr) ? (mSpeedHistoryPtr - ptr) : (mSpeedHistoryPtr + HISTORY_SIZE - ptr);
 }
 
 double KNetStatsView::calcSpeed(const double *buffer) {

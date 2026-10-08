@@ -82,6 +82,8 @@ void KNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	settings.beginGroup(ifName);
 	// General Settings
 	opts->mUpdateInterval = settings.value("UpdateInterval", 500).toInt();
+	if (opts->mUpdateInterval <= 0)
+		opts->mUpdateInterval = 500;
 	opts->mMonitoring = settings.value("Monitoring", true).toBool();
 	opts->mNotifications = settings.value("DisplayNotifications", true).toBool();
 	opts->mTheme = settings.value("Theme", defaultTheme).toInt();

@@ -6,6 +6,7 @@
 
 #include <QMenu>
 #include <fstream>
+#include <algorithm>
 #include "statistics.h"
 
 extern const char *programName;
@@ -16,6 +17,7 @@ KNetStatsView::KNetStatsView(KNetStats *parent, const QString &interface)
 	mCarrier = interfaceIsValid();
 	mFirstUpdate = true;
 
+	KNetStats::readInterfaceConfig(interface, &mOptions);
 	mTimer = new QTimer(this);
 	mStatistics = new Statistics(this);
 	mTrayIcon = new QSystemTrayIcon(this);
@@ -23,7 +25,6 @@ KNetStatsView::KNetStatsView(KNetStats *parent, const QString &interface)
 	mContextMenu->addAction("Configure Interfaces", parent, &KNetStats::showConfigure);
 	mContextMenu->addAction("Quit KNetStats", parent, []() { QApplication::quit(); });
 
-	KNetStats::readInterfaceConfig(interface, &mOptions);
 	setupTrayIcon();
 	setupView();
 
@@ -68,11 +69,11 @@ void KNetStatsView::checkMissingInterface() {
 }
 
 void KNetStatsView::interfaceMissing() {
+	resetSampling();
 	if (mOptions.mNotifications)
 		mTrayIcon->showMessage(programName, QString("Interface %1 disappeared!").arg(mInterface),
 							   QSystemTrayIcon::Information,
 							   3000);
-	QApplication::processEvents();
 	mTrayIcon->hide();
 	disconnect(mTimer, &QTimer::timeout, this, &KNetStatsView::updateStats);
 	connect(mTimer, &QTimer::timeout, this, &KNetStatsView::checkMissingInterface);
@@ -81,6 +82,8 @@ void KNetStatsView::interfaceMissing() {
 
 void KNetStatsView::updateViewOptions() {
 	KNetStats::readInterfaceConfig(mInterface, &mOptions);
+	mTimer->setInterval(mOptions.mUpdateInterval);
+	mStatistics->updateTimerInterval();
 	setupTrayIcon();
 }
 
@@ -91,7 +94,7 @@ void KNetStatsView::updateStats() {
 	}
 
 	FILE *fp = fopen((mSysDevPath + "carrier").toLatin1(), "r");
-	int carrierFlag = 0;
+	int carrierFlag = '0';
 
 	if (fp) {
 		carrierFlag = fgetc(fp);
@@ -101,13 +104,13 @@ void KNetStatsView::updateStats() {
 	}
 
 	if (carrierFlag == '0') { // carrier down
+		resetSampling();
 		if (mCarrier) {
 			mCarrier = false;
 			if (mOptions.mNotifications)
 				mTrayIcon->showMessage(programName, QString("Interface %1 is down!").arg(mInterface),
 									   QSystemTrayIcon::Information,
 									   3000);
-			QApplication::processEvents();
 			mTrayIcon->hide();
 			mParent->checkTrayIconsAvailable();
 		}
@@ -122,41 +125,38 @@ void KNetStatsView::updateStats() {
 		mParent->checkTrayIconsAvailable();
 	}
 
-	unsigned long long brx = readInterfaceNumValue("rx_bytes");
-	unsigned long long btx = readInterfaceNumValue("tx_bytes");
-	unsigned long long prx = readInterfaceNumValue("rx_packets");
-	unsigned long long ptx = readInterfaceNumValue("tx_packets");
+	unsigned long long brx{}, btx{}, prx{}, ptx{};
+	if (!readInterfaceNumValue("rx_bytes", brx) ||
+		!readInterfaceNumValue("tx_bytes", btx) ||
+		!readInterfaceNumValue("rx_packets", prx) ||
+		!readInterfaceNumValue("tx_packets", ptx)) {
+		resetSampling();
+		return;
+	}
 
-	if (!mFirstUpdate) { // a primeira velocidade sempre eh absurda, para evitar isso temos o mFirstUpdate
+	const bool countersReset = brx < mBRx || btx < mBTx || prx < mPRx || ptx < mPTx;
+	if (countersReset)
+		resetSampling();
+
+	if (mSampleClock.isValid()) {
+		const qint64 elapsedNs = mSampleClock.nsecsElapsed();
+		if (elapsedNs <= 0)
+			return;
+		const double perSecond = 1000000000.0 / double(elapsedNs);
 		if (++mSpeedBufferPtr == SPEED_BUFFER_SIZE)
 			mSpeedBufferPtr = 0;
 		if (++mSpeedHistoryPtr == HISTORY_SIZE)
 			mSpeedHistoryPtr = 0;
 
-		// Calcula as velocidades
-		mSpeedBufferTx[mSpeedBufferPtr] = ((btx - mBTx) * (1000.0f / mOptions.mUpdateInterval));
-		mSpeedBufferRx[mSpeedBufferPtr] = ((brx - mBRx) * (1000.0f / mOptions.mUpdateInterval));
-		mSpeedBufferPTx[mSpeedBufferPtr] = ((ptx - mPTx) * (1000.0f / mOptions.mUpdateInterval));
-		mSpeedBufferPRx[mSpeedBufferPtr] = ((prx - mPRx) * (1000.0f / mOptions.mUpdateInterval));
-
+		mSpeedBufferTx[mSpeedBufferPtr] = (btx - mBTx) * perSecond;
+		mSpeedBufferRx[mSpeedBufferPtr] = (brx - mBRx) * perSecond;
+		mSpeedBufferPTx[mSpeedBufferPtr] = (ptx - mPTx) * perSecond;
+		mSpeedBufferPRx[mSpeedBufferPtr] = (prx - mPRx) * perSecond;
 		mSpeedHistoryRx[mSpeedHistoryPtr] = calcSpeed(mSpeedBufferRx);
 		mSpeedHistoryTx[mSpeedHistoryPtr] = calcSpeed(mSpeedBufferTx);
-
-		mMaxSpeedAge--;
-
-		if (mSpeedHistoryTx[mSpeedHistoryPtr] > mMaxSpeed) {
-			mMaxSpeed = mSpeedHistoryTx[mSpeedHistoryPtr];
-			mMaxSpeedAge = HISTORY_SIZE;
-		}
-		if (mSpeedHistoryRx[mSpeedHistoryPtr] > mMaxSpeed) {
-			mMaxSpeed = mSpeedHistoryRx[mSpeedHistoryPtr];
-			mMaxSpeedAge = HISTORY_SIZE;
-		}
-		if (mMaxSpeedAge < 1)
-			calcMaxSpeed();
-	} else {
-		mFirstUpdate = false;
+		calcMaxSpeed();
 	}
+	mSampleClock.start();
 
 	QIcon *newIcon;
 	if (brx == mBRx) {
@@ -176,11 +176,12 @@ void KNetStatsView::updateStats() {
 		mTrayIcon->setIcon(*mCurrentIcon);
 	}
 
-	// Update stats
-	mTotalBytesRx += brx - mBRx;
-	mTotalBytesTx += btx - mBTx;
-	mTotalPktRx += prx - mPRx;
-	mTotalPktTx += ptx - mPTx;
+	// Include existing interface counters on startup, then accumulate safe deltas.
+	mTotalBytesRx += mFirstUpdate || brx < mBRx ? brx : brx - mBRx;
+	mTotalBytesTx += mFirstUpdate || btx < mBTx ? btx : btx - mBTx;
+	mTotalPktRx += mFirstUpdate || prx < mPRx ? prx : prx - mPRx;
+	mTotalPktTx += mFirstUpdate || ptx < mPTx ? ptx : ptx - mPTx;
+	mFirstUpdate = false;
 
 	mBRx = brx;
 	mBTx = btx;
@@ -188,11 +189,20 @@ void KNetStatsView::updateStats() {
 	mPTx = ptx;
 }
 
-unsigned long long KNetStatsView::readInterfaceNumValue(const char *name) {
-	unsigned long long retval;
+bool KNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) {
 	std::ifstream file((mSysDevPath + "statistics/" + name).toLatin1());
-	file >> retval;
-	return retval;
+	return bool(file >> value);
+}
+
+void KNetStatsView::resetSampling() {
+	mSampleClock.invalidate();
+	std::fill_n(mSpeedBufferRx, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mSpeedBufferTx, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mSpeedBufferPRx, SPEED_BUFFER_SIZE, 0.0);
+	std::fill_n(mSpeedBufferPTx, SPEED_BUFFER_SIZE, 0.0);
+	mSpeedHistoryRx[mSpeedHistoryPtr] = 0.0;
+	mSpeedHistoryTx[mSpeedHistoryPtr] = 0.0;
+	calcMaxSpeed();
 }
 
 void KNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
