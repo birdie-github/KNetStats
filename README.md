@@ -173,3 +173,4 @@ settings under `HKEY_CURRENT_USER\Software\QNetStats\QNetStats` by default.
  - [James](https://github.com/telans) for porting the app to KDE5.
  - @birdie-github for thorough testing during development, and for kindly sponsoring that work
  - All the original KNetStats contributors
+ - OpenAI/ChatGPT who made this version of the application possible
