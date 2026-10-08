@@ -9,21 +9,21 @@ void Chart::paintEvent(QPaintEvent *event) {
 	QBrush brush(QColor(0x33, 0x33, 0x33), Qt::BrushStyle::CrossPattern);
 	paint.fillRect(0, 0, width(), height(), brush);
 
-	if (mBufferSize <= 0 || height() <= 1 || *mMaxSpeed <= 0.0)
+	if (mBufferSize < 2 || width() <= 1 || height() <= 1 || *mMaxSpeed <= 0.0)
 		return;
 
-	const double step = width() / double(mBufferSize);
+	const int right = width() - 1;
 	const int HEIGHT = height() - 1;
 
-	int x;
-	int lastX = x = width();
+	int lastX = right;
 	int lastRxY = HEIGHT - int(HEIGHT * (mDldBuffer[*mPtr] / (*mMaxSpeed)));
 	int lastTxY = HEIGHT - int(HEIGHT * (mUplBuffer[*mPtr] / (*mMaxSpeed)));
 
-	int count = 0;
-	for (int i = *mPtr; count < mBufferSize; i--) {
-		if (i < 0)
+	int i = *mPtr;
+	for (int count = 1; count < mBufferSize; ++count) {
+		if (--i < 0)
 			i = mBufferSize - 1;
+		const int x = right - int(qint64(right) * count / (mBufferSize - 1));
 		int rxY = HEIGHT - int(HEIGHT * (mDldBuffer[i] / (*mMaxSpeed)));
 		int txY = HEIGHT - int(HEIGHT * (mUplBuffer[i] / (*mMaxSpeed)));
 		paint.setPen(QColor(mInterfaceOptions->mChartDldColor));
@@ -34,9 +34,6 @@ void Chart::paintEvent(QPaintEvent *event) {
 		lastX = x;
 		lastRxY = rxY;
 		lastTxY = txY;
-
-		count++;
-		x = width() - int(step * (count + 1));
 	}
 }
 
