@@ -34,6 +34,7 @@ private:
 	const double *mMaxSpeed;
 	const int *mPtr;
 	int mBufferSize;
+	quint64 mNewestSample = 0;
 	QVector<double> mUpload, mDownload;
 	QTimer *mFrameTimer;
 	QElapsedTimer mAnimationClock;

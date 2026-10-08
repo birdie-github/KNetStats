@@ -1,6 +1,8 @@
 #include "chart.h"
 #include <QPainter>
 #include <QBrush>
+#include <QPen>
+#include <QPolygonF>
 #include <QTimer>
 #include <QShowEvent>
 #include <QHideEvent>
@@ -36,6 +38,7 @@ void Chart::snapshotHistory() {
 	mFrameTimer->stop();
 	mAnimationClock.invalidate();
 	mScrollStart = 0.0;
+	mNewestSample = mBufferSize > 0 ? quint64(mBufferSize - 1) : 0;
 	mUpload.clear();
 	mDownload.clear();
 	// Copy the circular history in chronological order, oldest to newest.
@@ -63,6 +66,7 @@ void Chart::sampleUpdated(bool reset) {
 	mScaleStart = displayedMaximumSpeed();
 	mScaleTarget = *mMaxSpeed;
 	mScrollStart = remaining + 1.0;
+	++mNewestSample;
 	mUpload.append(mUplBuffer[*mPtr]);
 	mDownload.append(mDldBuffer[*mPtr]);
 	const int retained = mBufferSize + int(std::ceil(mScrollStart));
@@ -96,26 +100,38 @@ void Chart::paintEvent(QPaintEvent *event) {
 	QBrush brush(QColor(0x33, 0x33, 0x33), Qt::BrushStyle::CrossPattern);
 	paint.fillRect(0, 0, width(), height(), brush);
 
-	const double maximum = displayedMaximumSpeed();
+	const double progress = animationProgress();
+	const double maximum = mScaleStart + (mScaleTarget - mScaleStart) * progress;
 	if (mBufferSize < 2 || mUpload.size() < 2 || width() <= 1 || height() <= 1 || maximum <= 0.0)
 		return;
 
 	const double right = width() - 1;
 	const double chartHeight = height() - 1;
 	const double spacing = right / (mBufferSize - 1);
-	const double remaining = mScrollStart * (1.0 - animationProgress());
-	paint.setClipRect(rect());
-	paint.setRenderHint(QPainter::Antialiasing);
-	for (int i = 1; i < mUpload.size(); ++i) {
-		const double x = right + spacing * (remaining - (mUpload.size() - 1 - i));
-		const double previousX = x - spacing;
-		if (x < 0.0 || previousX > right)
-			continue;
-		paint.setPen(QColor(mInterfaceOptions->mChartDldColor));
-		paint.drawLine(QPointF(previousX, chartHeight * (1.0 - mDownload[i - 1] / maximum)),
-			QPointF(x, chartHeight * (1.0 - mDownload[i] / maximum)));
-		paint.setPen(QColor(mInterfaceOptions->mChartUplColor));
-		paint.drawLine(QPointF(previousX, chartHeight * (1.0 - mUpload[i - 1] / maximum)),
-			QPointF(x, chartHeight * (1.0 - mUpload[i] / maximum)));
+	const double remaining = mScrollStart * (1.0 - progress);
+	const double ratio = devicePixelRatioF();
+	// Give each sample a stable pixel position. Scroll the whole trace by an
+	// integer number of device pixels, instead of changing every segment's
+	// subpixel coverage on every frame. This also works with fractional DPI.
+	const double origin = std::round((double(mNewestSample) - remaining) * spacing * ratio);
+	QPolygonF upload, download;
+	upload.reserve(mUpload.size());
+	download.reserve(mDownload.size());
+	for (int i = 0; i < mUpload.size(); ++i) {
+		const double sample = double(mNewestSample) - (mUpload.size() - 1 - i);
+		const double x = std::round(right * ratio) + std::round(sample * spacing * ratio) - origin;
+		upload.append(QPointF(x, std::round(chartHeight * (1.0 - mUpload[i] / maximum) * ratio)));
+		download.append(QPointF(x, std::round(chartHeight * (1.0 - mDownload[i] / maximum) * ratio)));
 	}
+	paint.setClipRect(rect());
+	paint.setRenderHint(QPainter::Antialiasing, false);
+	paint.scale(1.0 / ratio, 1.0 / ratio);
+	QPen pen(QColor(mInterfaceOptions->mChartDldColor));
+	pen.setWidth(1);
+	pen.setCosmetic(true);
+	paint.setPen(pen);
+	paint.drawPolyline(download);
+	pen.setColor(QColor(mInterfaceOptions->mChartUplColor));
+	paint.setPen(pen);
+	paint.drawPolyline(upload);
 }
