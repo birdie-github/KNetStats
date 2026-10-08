@@ -19,6 +19,7 @@ struct ViewOptions {
 	int mTextDigitPosition;
 	bool mTextShowDigit;
 	bool mTextShadow;
+	bool mTextUseBits;
 	QString mTextDigitColor;
 	QString mTextUploadColor;
 	QString mTextDownloadColor;
@@ -71,6 +72,7 @@ private:
 	QComboBox *mTextDigitPosition;
 	QCheckBox *mTextShowDigit;
 	QCheckBox *mTextShadow;
+	QCheckBox *mTextUseBits;
 	ColorButton *mTextDigitColor;
 	ColorButton *mTextUploadColor;
 	ColorButton *mTextDownloadColor;

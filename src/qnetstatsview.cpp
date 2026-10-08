@@ -351,16 +351,20 @@ void QNetStatsView::updateTextTrayIcon(bool force) {
 	const double seconds = mSampleSeconds[mDeltaBufferPtr];
 	const double upload = seconds > 0.0 ? mDeltaBufferTx[mDeltaBufferPtr] / seconds : 0.0;
 	const double download = seconds > 0.0 ? mDeltaBufferRx[mDeltaBufferPtr] / seconds : 0.0;
-	const QString upl = mRatesAvailable ? formatShortRate(upload) : QString("-");
-	const QString dld = mRatesAvailable ? formatShortRate(download) : QString("-");
+	const QString upl = mRatesAvailable ? formatShortRate(upload, mOptions.mTextUseBits) : QString("-");
+	const QString dld = mRatesAvailable ? formatShortRate(download, mOptions.mTextUseBits) : QString("-");
 	if (force || upl != mLastUpload || dld != mLastDownload) {
 		mTextTrayIcon->setIcon(textStatisticsIcon(mOptions, upl, dld));
 		mLastUpload = upl;
 		mLastDownload = dld;
 	}
+	const double multiplier = mOptions.mTextUseBits ? 8.0 : 1.0;
+	const QString rateTemplate = mOptions.mTextUseBits
+		? tr("Upload: %1 bits/s\nDownload: %2 bits/s")
+		: tr("Upload: %1 bytes/s\nDownload: %2 bytes/s");
 	const QString rates = mRatesAvailable
-		? tr("Upload: %1 bytes/s\nDownload: %2 bytes/s")
-			.arg(QLocale().toString(upload, 'f', 1), QLocale().toString(download, 'f', 1))
+		? rateTemplate.arg(QLocale().toString(upload * multiplier, 'f', 1),
+			QLocale().toString(download * multiplier, 'f', 1))
 		: tr("Traffic statistics unavailable");
 	mTextTrayIcon->setToolTip(QString("%1: %2\n%3")
 		.arg(mOptions.mTextDigit).arg(displayName(), rates));

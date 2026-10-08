@@ -8,16 +8,19 @@
 #include <algorithm>
 #include <cmath>
 
-QString formatShortRate(double bytesPerSecond) {
-    static const char units[] = {'\0', 'K', 'M', 'G', 'T', 'P'};
+QString formatShortRate(double bytesPerSecond, bool useBits) {
+    const char *units = useBits ? " kmgtp" : " KMGTP";
+    const double base = useBits ? 1000.0 : 1024.0;
     double value = std::isfinite(bytesPerSecond) && bytesPerSecond > 0.0 ? bytesPerSecond : 0.0;
+    if (useBits)
+        value *= 8.0;
     int unit = 0;
-    while (value >= 1024.0 && unit < 5) {
-        value /= 1024.0;
+    while (value >= base && unit < 5) {
+        value /= base;
         ++unit;
     }
     if (value >= 999.5 && unit < 5) {
-        value /= 1024.0;
+        value /= base;
         ++unit;
     }
     value = std::min(value, 999.0 + (unit < 5 ? 0.499 : 0.0));
@@ -35,20 +38,22 @@ const unsigned char digits[10][5] = {
     {7, 5, 7, 5, 7}, {7, 5, 7, 1, 7}
 };
 
-int maximumRateWidth(const QFontMetrics &metrics) {
+int maximumRateWidth(const QFontMetrics &metrics, bool useBits) {
     QChar widest = QLatin1Char('0');
     for (char c = '1'; c <= '9'; ++c)
         if (metrics.horizontalAdvance(QLatin1Char(c)) > metrics.horizontalAdvance(widest))
             widest = QLatin1Char(c);
     int width = metrics.horizontalAdvance(QString(3, widest));
-    for (char suffix : {'K', 'M', 'G', 'T', 'P'}) {
+    const char *units = useBits ? "kmgtp" : "KMGTP";
+    for (int unit = 0; unit < 5; ++unit) {
+        const char suffix = units[unit];
         width = std::max(width, metrics.horizontalAdvance(QString(3, widest) + QLatin1Char(suffix)));
         width = std::max(width, metrics.horizontalAdvance(QString(widest) + QLatin1Char('.') + widest + QLatin1Char(suffix)));
     }
     return width;
 }
 
-void drawRate(QPainter &painter, QRect area, QFont font, const QString &text, int shadowSize) {
+void drawRate(QPainter &painter, QRect area, QFont font, const QString &text, int shadowSize, bool useBits) {
     if (area.isEmpty())
         return;
     // Fit the largest size of the chosen family/style that accommodates every
@@ -57,7 +62,7 @@ void drawRate(QPainter &painter, QRect area, QFont font, const QString &text, in
     for (int pixels = 1; pixels <= area.height(); ++pixels) {
         font.setPixelSize(pixels);
         const QFontMetrics metrics(font);
-        if (metrics.height() <= area.height() && maximumRateWidth(metrics) <= area.width())
+        if (metrics.height() <= area.height() && maximumRateWidth(metrics, useBits) <= area.width())
             bestSize = pixels;
     }
     font.setPixelSize(bestSize);
@@ -109,9 +114,9 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
     painter.setRenderHint(QPainter::TextAntialiasing);
     const int shadowSize = options.mTextShadow ? scale : 0;
     painter.setPen(QColor(options.mTextUploadColor));
-    drawRate(painter, uploadArea, options.mTextFont, upload, shadowSize);
+    drawRate(painter, uploadArea, options.mTextFont, upload, shadowSize, options.mTextUseBits);
     painter.setPen(QColor(options.mTextDownloadColor));
-    drawRate(painter, downloadArea, options.mTextFont, download, shadowSize);
+    drawRate(painter, downloadArea, options.mTextFont, download, shadowSize, options.mTextUseBits);
     return image;
 }
 

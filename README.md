@@ -15,7 +15,9 @@ above download, in bytes per second. Rates use only the counter difference from
 the previous sample divided by the actual elapsed time, without smoothing; the
 tray tooltip uses the same rates. Until two valid samples are available, the
 icon shows dashes. Short units use powers of 1024: `K`, `M`,
-`G`, `T`, and `P`. Each monitored text icon has a unique digit from 0 to 9;
+`G`, `T`, and `P`. **Use bits instead of bytes** is off by default; enabling
+it converts rates to bits/s, uses powers of 1000 and lowercase suffixes (`k`,
+`m`, `g`, `t`, `p`), and updates both the preview and tooltip units. Each monitored text icon has a unique digit from 0 to 9;
 used digits cannot be selected for another monitored text icon. This limits text
 icons to ten interfaces, without limiting ordinary interface monitoring.
 

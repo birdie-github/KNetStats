@@ -110,6 +110,7 @@ void Configure::storeCurrentOptions() {
 	view.mTextDigitPosition = mTextDigitPosition->currentIndex();
 	view.mTextShowDigit = mTextShowDigit->isChecked();
 	view.mTextShadow = mTextShadow->isChecked();
+	view.mTextUseBits = mTextUseBits->isChecked();
 	view.mTextDigitColor = mTextDigitColor->color().name();
 	view.mTextUploadColor = mTextUploadColor->color().name();
 	view.mTextDownloadColor = mTextDownloadColor->color().name();
@@ -148,6 +149,7 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	mTextDigitPosition->setCurrentIndex(view.mTextDigitPosition);
 	mTextShowDigit->setChecked(view.mTextShowDigit);
 	mTextShadow->setChecked(view.mTextShadow);
+	mTextUseBits->setChecked(view.mTextUseBits);
 	mTextDigitColor->setColor(QColor(view.mTextDigitColor));
 	mTextUploadColor->setColor(QColor(view.mTextUploadColor));
 	mTextDownloadColor->setColor(QColor(view.mTextDownloadColor));
@@ -229,6 +231,9 @@ void Configure::setupTextStatisticsControls() {
 	form->addRow(tr("Digit position:"), mTextDigitPosition);
 	mTextShadow = new QCheckBox(tr("Text shadow"), mTextStatisticsGroup);
 	form->addRow(mTextShadow);
+	mTextUseBits = new QCheckBox(tr("Use bits instead of bytes"), mTextStatisticsGroup);
+	mTextUseBits->setToolTip(tr("Bits/s use lowercase suffixes and powers of 1000; bytes/s use uppercase suffixes and powers of 1024."));
+	form->addRow(mTextUseBits);
 	mTextDigitColor = new ColorButton(mTextStatisticsGroup);
 	form->addRow(tr("Digit color:"), mTextDigitColor);
 	mTextUploadColor = new ColorButton(mTextStatisticsGroup);
@@ -257,6 +262,7 @@ void Configure::setupTextStatisticsControls() {
 	connect(mTextDigitPosition, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsPreview);
 	connect(mTextShowDigit, &QCheckBox::toggled, this, &Configure::updateTextStatisticsPreview);
 	connect(mTextShadow, &QCheckBox::toggled, this, &Configure::updateTextStatisticsPreview);
+	connect(mTextUseBits, &QCheckBox::toggled, this, &Configure::updateTextStatisticsPreview);
 	for (auto *button : {mTextDigitColor, mTextUploadColor, mTextDownloadColor, mTextBackgroundColor})
 		connect(button, &QPushButton::clicked, this, &Configure::updateTextStatisticsPreview);
 	connect(mTextTransparentBackground, &QCheckBox::toggled, this, [this](bool transparent) {
@@ -310,6 +316,8 @@ void Configure::updateTextStatisticsPreview() {
 	mTextDigitPosition->setEnabled(showDigit);
 	mTextDigitColor->setEnabled(showDigit);
 	const auto &view = mConfig[mCurrentItem];
-	mTextPreview16->setPixmap(QPixmap::fromImage(renderTextStatistics(view, "1.1M", "222K", 16)));
-	mTextPreview22->setPixmap(QPixmap::fromImage(renderTextStatistics(view, "1.1M", "222K", 22)));
+	mTextPreview16->setPixmap(QPixmap::fromImage(renderTextStatistics(view, formatShortRate(1.1 * 1024 * 1024, view.mTextUseBits),
+		formatShortRate(222 * 1024, view.mTextUseBits), 16)));
+	mTextPreview22->setPixmap(QPixmap::fromImage(renderTextStatistics(view, formatShortRate(1.1 * 1024 * 1024, view.mTextUseBits),
+		formatShortRate(222 * 1024, view.mTextUseBits), 22)));
 }

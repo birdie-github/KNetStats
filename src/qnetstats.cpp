@@ -51,6 +51,7 @@ ViewOptions defaultInterfaceOptions(const QString &name) {
 	defaults.mTextDigitPosition = 0;
 	defaults.mTextShowDigit = true;
 	defaults.mTextShadow = false;
+	defaults.mTextUseBits = false;
 	defaults.mTextDigitColor = "#ffd700";
 	defaults.mTextUploadColor = "#FF0000";
 	defaults.mTextDownloadColor = "#00FF00";
@@ -333,6 +334,7 @@ void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	opts->mTextDigitPosition = std::clamp(settings.value("TextStatisticsDigitPosition", defaults.mTextDigitPosition).toInt(), 0, 3);
 	opts->mTextShowDigit = settings.value("TextStatisticsShowDigit", defaults.mTextShowDigit).toBool();
 	opts->mTextShadow = settings.value("TextStatisticsShadow", defaults.mTextShadow).toBool();
+	opts->mTextUseBits = settings.value("TextStatisticsUseBits", defaults.mTextUseBits).toBool();
 	opts->mTextDigitColor = settings.value("TextStatisticsDigitColor", defaults.mTextDigitColor).toString();
 	opts->mTextUploadColor = settings.value("TextStatisticsUploadColor", defaults.mTextUploadColor).toString();
 	opts->mTextDownloadColor = settings.value("TextStatisticsDownloadColor", defaults.mTextDownloadColor).toString();
@@ -374,6 +376,7 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 		saveOverride(settings, "TextStatisticsDigitPosition", opt.mTextDigitPosition, defaults.mTextDigitPosition);
 		saveOverride(settings, "TextStatisticsShowDigit", opt.mTextShowDigit, defaults.mTextShowDigit);
 		saveOverride(settings, "TextStatisticsShadow", opt.mTextShadow, defaults.mTextShadow);
+		saveOverride(settings, "TextStatisticsUseBits", opt.mTextUseBits, defaults.mTextUseBits);
 		saveColorOverride(settings, "TextStatisticsDigitColor", opt.mTextDigitColor, defaults.mTextDigitColor);
 		saveColorOverride(settings, "TextStatisticsUploadColor", opt.mTextUploadColor, defaults.mTextUploadColor);
 		saveColorOverride(settings, "TextStatisticsDownloadColor", opt.mTextDownloadColor, defaults.mTextDownloadColor);

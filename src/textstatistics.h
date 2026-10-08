@@ -7,7 +7,7 @@
 
 struct ViewOptions;
 
-QString formatShortRate(double bytesPerSecond);
+QString formatShortRate(double bytesPerSecond, bool useBits = false);
 QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
                            const QString &download, int size);
 QIcon textStatisticsIcon(const ViewOptions &options, const QString &upload,
