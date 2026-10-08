@@ -120,6 +120,10 @@ void Statistics::showEvent(QShowEvent *event) {
 }
 
 void Statistics::hideEvent(QHideEvent *event) {
+	// Window-flag changes also hide the dialog. They are mode transitions,
+	// not a request to remember the intermediate layout or window state.
+	if (!event->spontaneous() && !mChangingMode)
+		mHiddenGeometry = saveGeometry();
 	mTimer->stop();
 	mDragPending = false;
 	mManualDrag = false;
@@ -127,7 +131,26 @@ void Statistics::hideEvent(QHideEvent *event) {
 }
 
 void Statistics::showWindow() {
-	this->show();
+	if (isVisible())
+		return;
+	if (mHiddenGeometry.isEmpty()) {
+		show();
+		return;
+	}
+	restoreGeometry(mHiddenGeometry);
+	showAtCurrentPosition();
+}
+
+void Statistics::showAtCurrentPosition() {
+	const QPoint framePosition = pos();
+	// A move performed by the window manager does not mark the QWidget as
+	// explicitly positioned. Without this, QDialog may reposition on show.
+	setAttribute(Qt::WA_Moved);
+	show();
+	// Send an explicit placement request after mapping as well. Use frame
+	// coordinates so the classic window's title bar does not introduce drift.
+	if (windowHandle() && !(windowState() & (Qt::WindowMaximized | Qt::WindowFullScreen | Qt::WindowMinimized)))
+		windowHandle()->setFramePosition(framePosition);
 }
 
 void Statistics::hideWindow() {
@@ -139,6 +162,8 @@ void Statistics::setCompact(bool compact) {
 		return;
 
 	const bool wasVisible = isVisible();
+	mChangingMode = true;
+	mHiddenGeometry.clear();
 	mDragPending = false;
 	mManualDrag = false;
 	if (compact) {
@@ -170,7 +195,8 @@ void Statistics::setCompact(bool compact) {
 	// Changing window flags hides the dialog, and reparenting hides the chart.
 	mChartWidget->show();
 	if (wasVisible)
-		show();
+		showAtCurrentPosition();
+	mChangingMode = false;
 }
 
 void Statistics::keyPressEvent(QKeyEvent *event) {

@@ -33,14 +33,17 @@ private:
 	QVBoxLayout *mRootLayout;
 	QLabel *mInterfaceLabel;
 	bool mCompact = false;
+	bool mChangingMode = false;
 	bool mDragPending = false;
 	bool mManualDrag = false;
 	QPoint mDragStart;
 	QPoint mDragWindowStart;
 	QByteArray mNormalGeometry;
+	QByteArray mHiddenGeometry;
 	Qt::WindowFlags mNormalFlags;
 
 	void setCompact(bool compact);
+	void showAtCurrentPosition();
 
 public slots:
 
