@@ -1,0 +1,84 @@
+name: Windows build and package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 (Qt 6)
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Windows build dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-ntldd
+
+      - name: Build QNetStats
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_QT=6
+          cmake --build build --parallel "$(nproc)"
+
+      - name: Deploy Qt and runtime dependencies
+        run: |
+          set -euo pipefail
+          deploy_dir=build/package
+          mkdir -p "$deploy_dir"
+          cp build/qnetstats.exe "$deploy_dir/"
+          cp COPYING "$deploy_dir/LICENSE.txt"
+          windeployqt6 \
+            --release \
+            --compiler-runtime \
+            --no-translations \
+            --no-opengl-sw \
+            --verbose 1 \
+            "$deploy_dir/qnetstats.exe"
+
+          # windeployqt handles Qt plugins; ntldd also finds the libraries
+          # supplied by MSYS2 that Qt and those plugins depend on.
+          find "$deploy_dir" \( -iname '*.exe' -o -iname '*.dll' \) -print0 |
+          while IFS= read -r -d '' binary; do
+            ntldd -R "$binary"
+          done > build/runtime-dependencies.txt
+          awk '$2 == "=>" {
+            path=$3
+            gsub(/\\/, "/", path)
+            if (tolower(path) ~ /\/ucrt64\/bin\//)
+              print $1
+          }' build/runtime-dependencies.txt |
+          sort -fu |
+          while IFS= read -r dll; do
+            src="/ucrt64/bin/$dll"
+            test -f "$src"
+            if [ ! -f "$deploy_dir/$dll" ]; then
+              cp -a "$src" "$deploy_dir/"
+            fi
+          done
+          test -f "$deploy_dir/platforms/qwindows.dll"
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: QNetStats-Windows-x64-Qt6-${{ github.sha }}
+          path: build/package/
+          if-no-files-found: error
+          retention-days: 14
