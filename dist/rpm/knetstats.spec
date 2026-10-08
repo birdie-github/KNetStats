@@ -10,7 +10,7 @@ Source:	    https://github.com/telans/KNetStats/archive/v%{version}.tar.gz
 
 BuildRequires: cmake
 BuildRequires: pkgconfig
-BuildRequires: qt5-qtbase-devel
+BuildRequires: qt6-qtbase-devel
 
 %description
 KNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.
@@ -19,7 +19,7 @@ KNetStats is a simple Qt network interface and statistics viewer with an associa
 %autosetup -n KNetStats
 
 %build
-%cmake
+%cmake -DUSE_QT=6
 %cmake_build
 
 %install

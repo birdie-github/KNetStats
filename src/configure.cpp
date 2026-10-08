@@ -71,9 +71,9 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	mUpdateInterval->setValue(view.mUpdateInterval);
 	mTheme->setCurrentIndex(view.mTheme);
 	// Chart Options
-	mChartUplColor->setColor(view.mChartUplColor);
-	mChartDldColor->setColor(view.mChartDldColor);
-	mChartBgColor->setColor(view.mChartBgColor);
+	mChartUplColor->setColor(QColor(view.mChartUplColor));
+	mChartDldColor->setColor(QColor(view.mChartDldColor));
+	mChartBgColor->setColor(QColor(view.mChartBgColor));
 	mChartTransparentBackground->setChecked(view.mChartTransparentBackground);
 	mCurrentItem = interface;
 

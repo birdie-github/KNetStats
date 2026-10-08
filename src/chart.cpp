@@ -23,9 +23,9 @@ void Chart::paintEvent(QPaintEvent *event) {
 			i = mBufferSize - 1;
 		int rxY = HEIGHT - int(HEIGHT * (mDldBuffer[i] / (*mMaxSpeed)));
 		int txY = HEIGHT - int(HEIGHT * (mUplBuffer[i] / (*mMaxSpeed)));
-		paint.setPen(mInterfaceOptions->mChartDldColor);
+		paint.setPen(QColor(mInterfaceOptions->mChartDldColor));
 		paint.drawLine(lastX, lastRxY, x, rxY);
-		paint.setPen(mInterfaceOptions->mChartUplColor);
+		paint.setPen(QColor(mInterfaceOptions->mChartUplColor));
 		paint.drawLine(lastX, lastTxY, x, txY);
 
 		lastX = x;

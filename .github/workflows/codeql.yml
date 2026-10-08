@@ -22,7 +22,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze
+    name: Analyze (Qt ${{ matrix.qt_version }})
     # Runner size impacts CodeQL analysis time. To learn more, please see:
     #   - https://gh.io/recommended-hardware-resources-for-running-codeql
     #   - https://gh.io/supported-runners-and-hardware-resources
@@ -39,6 +39,12 @@ jobs:
       fail-fast: false
       matrix:
         language: [ 'cpp' ]
+        qt_version: [ '5', '6' ]
+        include:
+          - qt_version: '5'
+            qt_package: qtbase5-dev
+          - qt_version: '6'
+            qt_package: qt6-base-dev
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift' ]
         # Use only 'java' to analyze code written in Java, Kotlin or both
         # Use only 'javascript' to analyze code written in JavaScript, TypeScript or both
@@ -50,7 +56,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
@@ -64,12 +70,14 @@ jobs:
       run: |
         echo "Installing Build Dependencies"
         sudo apt-get update
-        sudo apt-get install qtbase5-dev
+        sudo apt-get install ${{ matrix.qt_package }}
 
     - name: Build KNetStats
-      uses: github/codeql-action/autobuild@v2
+      run: |
+        cmake -S . -B build -DUSE_QT=${{ matrix.qt_version }}
+        cmake --build build --parallel 2
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v4
       with:
-        category: "/language:${{matrix.language}}"
+        category: "/language:${{matrix.language}}/qt:${{matrix.qt_version}}"

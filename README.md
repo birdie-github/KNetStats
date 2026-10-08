@@ -27,12 +27,12 @@ Otherwise, building instructions are provided below:
 
 An RPM SPEC file (untested) and an Arch PKGBUILD is provided within `dist/`. You can use those to install KNetStats on the appropriate distros.
 
-KNetStats uses Qt Widgets and Qt Network; KDE Frameworks are not required.
+KNetStats supports Qt 5.11 or newer and Qt 6, using Qt Widgets and Qt Network. KDE Frameworks are not required. CMake prefers Qt6 when available and otherwise uses Qt5. The provided packaging definitions select Qt6 explicitly.
 
 Manually building KNetStats requires Git and the following packages to be installed
- - Ubuntu: `cmake g++ qtbase5-dev`
- - Fedora: `cmake gcc-c++ qt5-qtbase-devel`
- - Arch Linux: `cmake qt5-base`
+ - Ubuntu: `cmake g++ qt6-base-dev` (Qt5: `qtbase5-dev`)
+ - Fedora: `cmake gcc-c++ qt6-qtbase-devel` (Qt5: `qt5-qtbase-devel`)
+ - Arch Linux: `cmake qt6-base` (Qt5: `qt5-base`)
 
 #### Procedure:
 
@@ -50,6 +50,18 @@ $ cmake --build build
 # Install the program to /usr/local (default)
 $ sudo cmake --install build
 ```
+
+To choose a Qt version explicitly, configure a separate build directory:
+
+```bash
+cmake -S . -B build-qt5 -DUSE_QT=5
+cmake --build build-qt5
+
+cmake -S . -B build-qt6 -DUSE_QT=6
+cmake --build build-qt6
+```
+
+The default is `-DUSE_QT=AUTO`. An explicitly selected version must be installed; CMake will not fall back to another version.
 
 ---
 

@@ -8,11 +8,11 @@ arch=('x86_64')
 url="https://github.com/telans/KNetStats"
 license=('GPL-2')
 depends=(
-    'qt5-base'
+    'qt6-base'
 )
 makedepends=(
     'cmake'
-    'qt5-base'
+    'qt6-base'
 )
 source=("$pkgname-$pkgver.tar.gz::https://github.com/telans/KNetStats/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
@@ -21,6 +21,7 @@ build() {
     cmake -B build -S "$_pkgname-$pkgver" \
         -DCMAKE_BUILD_TYPE='None' \
         -DCMAKE_INSTALL_PREFIX='/usr' \
+        -DUSE_QT=6 \
         -Wno-dev
     cmake --build build
 }

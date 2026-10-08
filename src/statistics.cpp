@@ -2,6 +2,8 @@
 #include "chart.h"
 #include "knetstatsview.h"
 #include <QNetworkInterface>
+#include <QHostAddress>
+#include <QStringList>
 #include <QTimer>
 #include <QMenu>
 
@@ -41,13 +43,13 @@ void Statistics::updateStatistics() {
 	mMTU->setNum(interface.maximumTransmissionUnit());
 	mMAC->setText(interface.hardwareAddress());
 	if (interface.flags() & QNetworkInterface::IsRunning) {
-		QString ipStr, netmaskStr;
+		QStringList ips, netmasks;
 		for (const QNetworkAddressEntry &addr: interface.addressEntries()) {
-			ipStr += addr.ip().toString() + "\n";
-			netmaskStr += addr.netmask().toString() + "\n";
+			ips.append(addr.ip().toString());
+			netmasks.append(addr.netmask().toString());
 		}
-		mIP->setText(ipStr.remove(QRegExp("\\n$")));
-		mNetmask->setText(netmaskStr.remove(QRegExp("\\n$")));
+		mIP->setText(ips.join(QLatin1Char('\n')));
+		mNetmask->setText(netmasks.join(QLatin1Char('\n')));
 		return;
 	}
 	mIP->setText("Not Connected");
