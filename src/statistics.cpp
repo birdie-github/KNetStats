@@ -22,7 +22,8 @@ Statistics::Statistics(QNetStatsView *parent)
 
 	mTimer = new QTimer(this);
 	updateTimerInterval();
-	connect(tabWidget, &QTabWidget::tabBarClicked, this, &Statistics::updateTabSize);
+	connect(tabWidget, &QTabWidget::currentChanged, this, &Statistics::updateTabSize);
+	updateTabSize(tabWidget->currentIndex());
 	connect(mTimer, &QTimer::timeout, this, &Statistics::updateStatistics);
 	connect(mTimer, &QTimer::timeout, chart, qOverload<>(&Chart::repaint));
 	connect(mOk, &QPushButton::clicked, this, &Statistics::hideWindow);
