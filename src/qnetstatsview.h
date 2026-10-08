@@ -81,6 +81,7 @@ private:
 	QElapsedTimer mSampleClock;
 
 	void resetSampling();
+	bool interfaceHasCarrier() const;
 
 	// set up the view.
 	void setupTrayIcon();

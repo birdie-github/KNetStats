@@ -13,7 +13,7 @@ extern const char *programName;
 QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 		: QWidget(parent), mParent(parent), mSysDevPath("/sys/class/net/" + interface + "/") {
 	mInterface = interface;
-	mCarrier = interfaceIsValid();
+	mCarrier = false;
 	mFirstUpdate = true;
 
 	QNetStats::readInterfaceConfig(interface, &mOptions);
@@ -37,7 +37,8 @@ void QNetStatsView::setupView() {
 		return;
 	}
 
-	mTrayIcon->show();
+	mCarrier = interfaceHasCarrier();
+	mTrayIcon->setVisible(mCarrier);
 	connect(mTimer, &QTimer::timeout, this, &QNetStatsView::updateStats);
 }
 
@@ -55,7 +56,8 @@ void QNetStatsView::setupTrayIcon() {
 
 void QNetStatsView::checkMissingInterface() {
 	if (interfaceIsValid()) {
-		mTrayIcon->show();
+		mCarrier = interfaceHasCarrier();
+		mTrayIcon->setVisible(mCarrier);
 		if (mOptions.mNotifications)
 			mTrayIcon->showMessage(programName, QString("Interface %1 reappeared!").arg(mInterface),
 								   QSystemTrayIcon::Information,
@@ -91,17 +93,7 @@ void QNetStatsView::updateStats() {
 		return;
 	}
 
-	FILE *fp = fopen((mSysDevPath + "carrier").toLatin1(), "r");
-	int carrierFlag = '0';
-
-	if (fp) {
-		carrierFlag = fgetc(fp);
-		// /sys/net/<>/carrier can immediately read EOF if the network state is DOWN. Pin it to 0.
-		carrierFlag = (carrierFlag < 0) ? '0' : carrierFlag;
-		fclose(fp);
-	}
-
-	if (carrierFlag == '0') { // carrier down
+	if (!interfaceHasCarrier()) { // carrier down
 		resetSampling();
 		if (mCarrier) {
 			mCarrier = false;
@@ -109,19 +101,23 @@ void QNetStatsView::updateStats() {
 				mTrayIcon->showMessage(programName, QString("Interface %1 is down!").arg(mInterface),
 									   QSystemTrayIcon::Information,
 									   3000);
+		}
+		if (mTrayIcon->isVisible()) {
 			mTrayIcon->hide();
 			mParent->checkTrayIconsAvailable();
 		}
 		return;
-	} else if (!mCarrier) { // carrier up
-		mCarrier = true;
+	}
+	const bool carrierWasDown = !mCarrier;
+	mCarrier = true;
+	if (!mTrayIcon->isVisible()) {
 		mTrayIcon->show();
-		if (mOptions.mNotifications)
-			mTrayIcon->showMessage(programName, QString("Interface %1 is up!").arg(mInterface),
-								   QSystemTrayIcon::Information,
-								   3000);
 		mParent->checkTrayIconsAvailable();
 	}
+	if (carrierWasDown && mOptions.mNotifications)
+		mTrayIcon->showMessage(programName, QString("Interface %1 is up!").arg(mInterface),
+							   QSystemTrayIcon::Information,
+							   3000);
 
 	unsigned long long brx{}, btx{}, prx{}, ptx{};
 	if (!readInterfaceNumValue("rx_bytes", brx) ||
@@ -185,6 +181,16 @@ void QNetStatsView::updateStats() {
 	mBTx = btx;
 	mPRx = prx;
 	mPTx = ptx;
+}
+
+bool QNetStatsView::interfaceHasCarrier() const {
+	FILE *file = fopen((mSysDevPath + "carrier").toLatin1(), "r");
+	if (!file)
+		return false;
+	// EOF or an unreadable carrier is treated as down.
+	const bool carrier = fgetc(file) == '1';
+	fclose(file);
+	return carrier;
 }
 
 bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) {
