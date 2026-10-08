@@ -1,3 +1,21 @@
+Version 2.1.0
+
+- Renamed KNetStats to QNetStats and removed KDE dependencies.
+- Added Qt6 support while retaining Qt5 compatibility.
+- Added Windows support and downloadable Windows Qt6 CI builds.
+- Added a fallback window for systems without a tray.
+- Fixed traffic sampling, counter resets, reconnects, and update timers.
+- Fixed configuration edits being lost, tab sizing, and chart sample spacing.
+- Added a borderless, draggable, always-on-top compact chart with interface name and speed scale.
+- Fixed window positions being lost across hide/show.
+- Added independently configurable activity icons, text statistics icons, and connection notifications.
+- Added optional unique interface digits, configurable fonts and colors, text shadows, transparency, and previews.
+- Made tray text use the full icon width and show unsmoothed rates.
+- Added optional bits/s with lowercase suffixes.
+- Changed settings to save only non-default values.
+- Excluded Linux dummy interfaces.
+- Fixed build and packaging issues and cleaned up legacy code.
+
 v2.0.0.alpha
 
 - Almost a complete rewrite porting to Qt5 and KF5WidgetsAddons
