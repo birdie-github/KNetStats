@@ -14,7 +14,6 @@ QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 		: QWidget(parent), mParent(parent), mSysDevPath("/sys/class/net/" + interface + "/") {
 	mInterface = interface;
 	mCarrier = false;
-	mFirstUpdate = true;
 
 	QNetStats::readInterfaceConfig(interface, &mOptions);
 	mTimer = new QTimer(this);
@@ -69,6 +68,7 @@ void QNetStatsView::checkMissingInterface() {
 }
 
 void QNetStatsView::interfaceMissing() {
+	mInterfaceIndex = 0;
 	resetSampling();
 	if (mOptions.mNotifications)
 		mTrayIcon->showMessage(programName, QString("Interface %1 disappeared!").arg(mInterface),
@@ -119,6 +119,11 @@ void QNetStatsView::updateStats() {
 							   QSystemTrayIcon::Information,
 							   3000);
 
+	const unsigned int interfaceIndex = readInterfaceIndex();
+	if (interfaceIndex == 0) {
+		resetSampling();
+		return;
+	}
 	unsigned long long brx{}, btx{}, prx{}, ptx{};
 	if (!readInterfaceNumValue("rx_bytes", brx) ||
 		!readInterfaceNumValue("tx_bytes", btx) ||
@@ -128,8 +133,14 @@ void QNetStatsView::updateStats() {
 		return;
 	}
 
+	// Do not commit a sample collected across an interface replacement.
+	if (readInterfaceIndex() != interfaceIndex) {
+		resetSampling();
+		return;
+	}
+	const bool newInterface = interfaceIndex != mInterfaceIndex;
 	const bool countersReset = brx < mBRx || btx < mBTx || prx < mPRx || ptx < mPTx;
-	if (countersReset)
+	if (newInterface || countersReset)
 		resetSampling();
 
 	if (mSampleClock.isValid()) {
@@ -153,7 +164,9 @@ void QNetStatsView::updateStats() {
 	mSampleClock.start();
 
 	QIcon *newIcon;
-	if (brx == mBRx) {
+	if (newInterface) {
+		newIcon = &mIconNone;
+	} else if (brx == mBRx) {
 		if (btx == mBTx)
 			newIcon = &mIconNone;
 		else
@@ -170,12 +183,12 @@ void QNetStatsView::updateStats() {
 		mTrayIcon->setIcon(*mCurrentIcon);
 	}
 
-	// Include existing interface counters on startup, then accumulate safe deltas.
-	mTotalBytesRx += mFirstUpdate || brx < mBRx ? brx : brx - mBRx;
-	mTotalBytesTx += mFirstUpdate || btx < mBTx ? btx : btx - mBTx;
-	mTotalPktRx += mFirstUpdate || prx < mPRx ? prx : prx - mPRx;
-	mTotalPktTx += mFirstUpdate || ptx < mPTx ? ptx : ptx - mPTx;
-	mFirstUpdate = false;
+	// Include the first counters of each interface lifetime, then safe deltas.
+	mTotalBytesRx += newInterface || brx < mBRx ? brx : brx - mBRx;
+	mTotalBytesTx += newInterface || btx < mBTx ? btx : btx - mBTx;
+	mTotalPktRx += newInterface || prx < mPRx ? prx : prx - mPRx;
+	mTotalPktTx += newInterface || ptx < mPTx ? ptx : ptx - mPTx;
+	mInterfaceIndex = interfaceIndex;
 
 	mBRx = brx;
 	mBTx = btx;
@@ -191,6 +204,14 @@ bool QNetStatsView::interfaceHasCarrier() const {
 	const bool carrier = fgetc(file) == '1';
 	fclose(file);
 	return carrier;
+}
+
+unsigned int QNetStatsView::readInterfaceIndex() const {
+	unsigned int index{};
+	std::ifstream file((mSysDevPath + "ifindex").toLatin1());
+	if (!(file >> index))
+		return 0;
+	return index;
 }
 
 bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) {

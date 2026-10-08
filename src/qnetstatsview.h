@@ -77,11 +77,12 @@ private:
 	QIcon mIconNone, mIconTx, mIconRx, mIconBoth;
 	QIcon *mCurrentIcon{};            // Current state
 	QTimer *mTimer;                    // Timer
-	bool mFirstUpdate;
+	unsigned int mInterfaceIndex{};
 	QElapsedTimer mSampleClock;
 
 	void resetSampling();
 	bool interfaceHasCarrier() const;
+	unsigned int readInterfaceIndex() const;
 
 	// set up the view.
 	void setupTrayIcon();
