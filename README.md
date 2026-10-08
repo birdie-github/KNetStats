@@ -76,5 +76,6 @@ The default is `-DUSE_QT=AUTO`. An explicitly selected version must be installed
 ## Credits:
 
  - Hugo Parente Lima for the original KNetStats project that this is based on, without it this would not exist
+ - [James](https://github.com/telans) for porting the app to KDE5.
  - @birdie-github for thorough testing during development, and for kindly sponsoring that work
  - All the original KNetStats contributors
