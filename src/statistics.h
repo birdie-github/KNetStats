@@ -32,6 +32,7 @@ private:
 	QWidget *mNormalContent;
 	QVBoxLayout *mRootLayout;
 	QLabel *mInterfaceLabel;
+	QLabel *mCompactMaxSpeedLabel;
 	bool mCompact = false;
 	bool mChangingMode = false;
 	bool mDragPending = false;
@@ -44,6 +45,7 @@ private:
 
 	void setCompact(bool compact);
 	void showAtCurrentPosition();
+	void updateCompactLabels();
 
 public slots:
 

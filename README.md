@@ -10,9 +10,10 @@
 
 ## Compact chart mode
 
-Double-click the traffic chart to show only the chart and the interface name in
-its top-left corner. The compact window has no title bar or border and stays on
-top. Hold the left mouse button and drag the chart to move it.
+Double-click the traffic chart to show only the chart, its current maximum-speed
+scale at the top left, and the interface name at the top right. The compact window
+has no title bar or border and stays on top. Hold the left mouse button and drag
+the chart to move it.
 
 Double-click again or press Escape to restore the normal window and its previous
 geometry. Resize the normal window before entering compact mode to choose the

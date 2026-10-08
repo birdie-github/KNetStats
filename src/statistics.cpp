@@ -12,6 +12,7 @@
 #include <QMouseEvent>
 #include <QVBoxLayout>
 #include <QWindow>
+#include <QFontMetrics>
 
 namespace {
 QPoint mouseGlobalPosition(const QMouseEvent *event) {
@@ -51,8 +52,12 @@ Statistics::Statistics(QNetStatsView *parent)
 	mInterfaceLabel->setAutoFillBackground(true);
 	mInterfaceLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 	mInterfaceLabel->adjustSize();
-	mInterfaceLabel->move(6, 4);
 	mInterfaceLabel->hide();
+	mCompactMaxSpeedLabel = new QLabel(chart);
+	mCompactMaxSpeedLabel->setFont(font());
+	mCompactMaxSpeedLabel->setAutoFillBackground(true);
+	mCompactMaxSpeedLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+	mCompactMaxSpeedLabel->hide();
 	this->update();
 
 	mTimer = new QTimer(this);
@@ -66,6 +71,8 @@ Statistics::Statistics(QNetStatsView *parent)
 
 void Statistics::updateStatistics() {
 	mMaxSpeed->setText(this->locale().formattedDataSize(mParent->mMaxSpeed) + +"/s");
+	if (mCompact)
+		updateCompactLabels();
 	mBRx->setText(this->locale().formattedDataSize(mParent->mTotalBytesRx));
 	mBTx->setText(this->locale().formattedDataSize(mParent->mTotalBytesTx));
 	mByteSpeedRx->setText(this->locale().formattedDataSize(mParent->mSpeedHistoryRx[mParent->mSpeedHistoryPtr]) + "/s");
@@ -95,6 +102,23 @@ void Statistics::updateStatistics() {
 		mMTU->setText("N/A");
 		mMAC->setText("N/A");
 	}
+}
+
+void Statistics::updateCompactLabels() {
+	// Use exactly the same scale value and formatting as the normal view.
+	mCompactMaxSpeedLabel->setText(mMaxSpeed->text());
+	const int availableWidth = qMax(0, mChartWidget->width() - 12);
+	const QSize speedSize = mCompactMaxSpeedLabel->sizeHint();
+	mCompactMaxSpeedLabel->resize(qMin(speedSize.width(), availableWidth), speedSize.height());
+	mCompactMaxSpeedLabel->move(6, 4);
+
+	// Keep the scale readable when space is tight; shorten the interface name
+	// rather than allowing the two labels to overlap.
+	const int nameWidth = qMax(0, availableWidth - mCompactMaxSpeedLabel->width() - 6);
+	mInterfaceLabel->setText(mInterfaceLabel->fontMetrics().elidedText(mParent->mInterface, Qt::ElideRight, nameWidth));
+	const QSize nameSize = mInterfaceLabel->sizeHint();
+	mInterfaceLabel->resize(qMin(nameSize.width(), nameWidth), nameSize.height());
+	mInterfaceLabel->move(qMax(6, mChartWidget->width() - mInterfaceLabel->width() - 6), 4);
 }
 
 void Statistics::updateTabSize(int tabIndex) {
@@ -174,8 +198,11 @@ void Statistics::setCompact(bool compact) {
 		mChart->removeWidget(mChartWidget);
 		mNormalContent->hide();
 		mRootLayout->addWidget(mChartWidget);
+		updateCompactLabels();
 		mInterfaceLabel->show();
 		mInterfaceLabel->raise();
+		mCompactMaxSpeedLabel->show();
+		mCompactMaxSpeedLabel->raise();
 		setWindowFlags(mNormalFlags | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 		setWindowState(Qt::WindowNoState);
 		mRootLayout->activate();
@@ -184,6 +211,7 @@ void Statistics::setCompact(bool compact) {
 	} else {
 		mCompact = false;
 		mInterfaceLabel->hide();
+		mCompactMaxSpeedLabel->hide();
 		mRootLayout->removeWidget(mChartWidget);
 		mChart->addWidget(mChartWidget);
 		mNormalContent->show();
@@ -211,6 +239,9 @@ void Statistics::keyPressEvent(QKeyEvent *event) {
 bool Statistics::eventFilter(QObject *object, QEvent *event) {
 	if (object != mChartWidget)
 		return QDialog::eventFilter(object, event);
+
+	if (mCompact && event->type() == QEvent::Resize)
+		updateCompactLabels();
 
 	if (event->type() == QEvent::MouseButtonDblClick) {
 		auto *mouse = static_cast<QMouseEvent *>(event);
