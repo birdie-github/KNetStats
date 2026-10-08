@@ -3,11 +3,51 @@
 #include <QBrush>
 #include <QPen>
 #include <QPolygonF>
+#include <QPainterPath>
 #include <QTimer>
 #include <QShowEvent>
 #include <QHideEvent>
 #include <algorithm>
 #include <cmath>
+
+namespace {
+QPainterPath roundedTrace(const QPolygonF &points) {
+	QPainterPath path;
+	if (points.isEmpty())
+		return path;
+	path.moveTo(points.first());
+	if (points.size() < 2)
+		return path;
+
+	QVector<double> slopes(points.size() - 1);
+	for (int i = 0; i < slopes.size(); ++i) {
+		const double width = points[i + 1].x() - points[i].x();
+		slopes[i] = width > 0.0 ? (points[i + 1].y() - points[i].y()) / width : 0.0;
+	}
+	QVector<double> tangents(points.size(), 0.0);
+	tangents.first() = slopes.first();
+	tangents.last() = slopes.last();
+	for (int i = 1; i < points.size() - 1; ++i) {
+		const double before = slopes[i - 1], after = slopes[i];
+		// Flatten peaks and troughs. Else limit the shared tangent to both
+		// adjacent slopes, keeping each curve inside its measured endpoints.
+		if ((before > 0.0 && after > 0.0) || (before < 0.0 && after < 0.0))
+			tangents[i] = std::copysign(std::min(std::abs(before), std::abs(after)), before);
+	}
+	for (int i = 0; i < points.size() - 1; ++i) {
+		const QPointF &start = points[i], &end = points[i + 1];
+		const double third = (end.x() - start.x()) / 3.0;
+		if (third <= 0.0) {
+			// Very narrow charts can put adjacent samples on the same pixel.
+			path.lineTo(end);
+			continue;
+		}
+		path.cubicTo(QPointF(start.x() + third, start.y() + tangents[i] * third),
+			QPointF(end.x() - third, end.y() - tangents[i + 1] * third), end);
+	}
+	return path;
+}
+}
 
 Chart::Chart(const ViewOptions *interfaceOptions, const double *uploadBuffer, const double *downloadBuffer,
 			 const double *maxspeed, const int *ptr, int bufferSize)
@@ -130,8 +170,8 @@ void Chart::paintEvent(QPaintEvent *event) {
 	pen.setWidth(1);
 	pen.setCosmetic(true);
 	paint.setPen(pen);
-	paint.drawPolyline(download);
+	paint.drawPath(roundedTrace(download));
 	pen.setColor(QColor(mInterfaceOptions->mChartUplColor));
 	paint.setPen(pen);
-	paint.drawPolyline(upload);
+	paint.drawPath(roundedTrace(upload));
 }

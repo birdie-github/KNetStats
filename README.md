@@ -42,7 +42,8 @@ Statistics menu for monitored interfaces.
 The chart scrolls continuously at approximately 30 frames per second, revealing
 new segments over one measurement interval. Its vertical scale and maximum-speed
 label transition together. Traces use crisp one-pixel strokes and move in whole
-device-pixel steps to avoid antialiasing shimmer. This adds about one sampling interval of visual delay
+device-pixel steps to avoid antialiasing shimmer. Bounded curves round the bends
+while passing through the samples without overshooting their values. This adds about one sampling interval of visual delay
 without changing sampled values or the immediate, unsmoothed tray text rates.
 Animation stops while the chart is hidden and resumes from the current history
 when shown again.
