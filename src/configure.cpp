@@ -240,10 +240,6 @@ void Configure::setupTextStatisticsControls() {
 	previews->addWidget(mTextPreview22);
 	previews->addStretch();
 	form->addRow(tr("Preview:"), previews);
-	auto *hint = new QLabel(tr("Upload above download, in bytes/s. The chosen font family and style "
-		"are fitted automatically. Digits already used by monitored text icons are unavailable."), mTextStatisticsGroup);
-	hint->setWordWrap(true);
-	form->addRow(hint);
 	gridLayout_3->addWidget(mTextStatisticsGroup, 0, 2, 2, 1);
 	connect(mTextStatisticsGroup, &QGroupBox::toggled, this, &Configure::updateTextStatisticsControls);
 	connect(mMonitoringInterface, &QCheckBox::toggled, this, &Configure::updateTextStatisticsControls);

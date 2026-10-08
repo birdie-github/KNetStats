@@ -204,6 +204,7 @@ void QNetStatsView::updateStats() {
 		mDeltaBufferRx[mDeltaBufferPtr] = brx - mBRx;
 		mDeltaBufferPTx[mDeltaBufferPtr] = ptx - mPTx;
 		mDeltaBufferPRx[mDeltaBufferPtr] = prx - mPRx;
+		mRatesAvailable = true;
 		mSpeedHistoryRx[mSpeedHistoryPtr] = calcSpeed(mDeltaBufferRx);
 		mSpeedHistoryTx[mSpeedHistoryPtr] = calcSpeed(mDeltaBufferTx);
 		calcMaxSpeed();
@@ -241,7 +242,6 @@ void QNetStatsView::updateStats() {
 	mBTx = btx;
 	mPRx = prx;
 	mPTx = ptx;
-	mRatesAvailable = true;
 	updateTextTrayIcon();
 }
 
@@ -347,8 +347,10 @@ void QNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
 void QNetStatsView::updateTextTrayIcon(bool force) {
 	if (!mOptions.mDisplayTextStatistics)
 		return;
-	const double upload = calcSpeed(mDeltaBufferTx);
-	const double download = calcSpeed(mDeltaBufferRx);
+	// Text statistics use only the latest counter interval, without smoothing.
+	const double seconds = mSampleSeconds[mDeltaBufferPtr];
+	const double upload = seconds > 0.0 ? mDeltaBufferTx[mDeltaBufferPtr] / seconds : 0.0;
+	const double download = seconds > 0.0 ? mDeltaBufferRx[mDeltaBufferPtr] / seconds : 0.0;
 	const QString upl = mRatesAvailable ? formatShortRate(upload) : QString("-");
 	const QString dld = mRatesAvailable ? formatShortRate(download) : QString("-");
 	if (force || upl != mLastUpload || dld != mLastDownload) {
