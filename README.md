@@ -8,6 +8,19 @@
 <p>A simple network interface and statistics viewer for Linux based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
 <p>QNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.<br>It displays and graphs data transmission information for easy visualization. It also displays information such as associated IPs and MAC addresses.</p>
 
+## Compact chart mode
+
+Double-click the traffic chart to show only the chart and the interface name in
+its top-left corner. The compact window has no title bar or border and stays on
+top. Hold the left mouse button and drag the chart to move it.
+
+Double-click again or press Escape to restore the normal window and its previous
+geometry. Resize the normal window before entering compact mode to choose the
+chart size. Tray hide/show preserves the current mode; compact mode and its
+position are not saved between app sessions. Window positioning and always-on-top
+behavior depend on the window manager. Native dragging uses Qt 5.15 or newer;
+older Qt versions use manual positioning, which may be restricted on Wayland.
+
 ## Screenshots:
 
 ![Statistics Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/StatisticsWindow.png)
