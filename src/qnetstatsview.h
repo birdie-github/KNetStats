@@ -42,6 +42,7 @@ public:
 	QNetStatsView(QNetStats *parent, const QString &interface);
 
 	void updateViewOptions();
+	void showStatistics();
 
 	// read a value from /sys/class/net/interface/name
 	bool readInterfaceNumValue(const char *name, unsigned long long &value);

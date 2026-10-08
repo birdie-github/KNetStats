@@ -6,6 +6,8 @@
 #include <QSystemTrayIcon>
 
 class QNetStatsView;
+class QListWidget;
+class QPushButton;
 
 class QNetStats : public QDialog {
 Q_OBJECT
@@ -18,7 +20,7 @@ public:
 
 public slots:
 
-	void showConfigure() { mConfigure->show(); };
+	void showConfigure();
 
 	/// Configure dialog Apply button
 	void configApply();
@@ -28,10 +30,16 @@ private:
 	QSystemTrayIcon *mBackupTrayIcon;
 	TrayIconMap mViews;
 	Configure *mConfigure;
+	QDialog *mFallbackWindow;
+	QListWidget *mFallbackInterfaces;
+	QPushButton *mFallbackStatistics;
 
 	void setup();
 
 	void setupBackupTrayIcon();
+	void setupFallbackWindow();
+	void updateFallbackWindow();
+	void showSelectedStatistics();
 
 	void saveConfig(const OptionsMap &options);
 };

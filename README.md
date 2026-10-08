@@ -70,6 +70,7 @@ The default is `-DUSE_QT=AUTO`. An explicitly selected version must be installed
  - This project is new and a lot of changes had to be made to make it compatible with Qt 5
    - New features have been added, and I'm not the best programmer, so I expect there will be a couple bugs here and there
  - For the time being only Linux is supported
+ - Without a system tray, a fallback window provides access to statistics, configuration, and Quit. Closing that window exits the app while no tray is available.
  - The original translations have not yet been incorporated, though the files remain in this repository
  - Any contributions would be greatly appreciated
 

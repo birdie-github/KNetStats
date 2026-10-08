@@ -203,11 +203,17 @@ void QNetStatsView::resetSampling() {
 	calcMaxSpeed();
 }
 
+void QNetStatsView::showStatistics() {
+	mStatistics->showWindow();
+	mStatistics->raise();
+	mStatistics->activateWindow();
+}
+
 void QNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
 	if (reason == QSystemTrayIcon::ActivationReason::Trigger) {
 		if (mStatistics->isVisible())
 			mStatistics->hideWindow();
 		else
-			mStatistics->showWindow();
+			showStatistics();
 	}
 }

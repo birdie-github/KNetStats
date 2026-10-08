@@ -2,10 +2,18 @@
 #include "qnetstatsview.h"
 #include "configure.h"
 
+#include <QApplication>
 #include <QMenu>
 #include <QNetworkInterface>
 #include <QSettings>
 #include <QMessageBox>
+#include <QListWidget>
+#include <QLabel>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QSignalBlocker>
+#include <QTimer>
 
 extern const char *programName;
 
@@ -28,6 +36,7 @@ QNetStats::QNetStats() : QDialog(nullptr, Qt::Window), mConfigure(nullptr) {
 }
 
 void QNetStats::checkTrayIconsAvailable() {
+	updateFallbackWindow();
 	for (auto view: mViews) {
 		if (view->trayIconVisible()) {
 			mBackupTrayIcon->hide();
@@ -40,6 +49,7 @@ void QNetStats::checkTrayIconsAvailable() {
 void QNetStats::setup() {
 	mConfigure = new Configure(this);
 	setupBackupTrayIcon();
+	setupFallbackWindow();
 
 	if (QNetworkInterface::allInterfaces().empty()) {
 		QMessageBox msg(this);
@@ -77,6 +87,89 @@ void QNetStats::setupBackupTrayIcon() {
 		}
 		mConfigure->show();
 	});
+}
+
+void QNetStats::setupFallbackWindow() {
+	mFallbackWindow = new QDialog(this);
+	mFallbackWindow->setWindowTitle(programName);
+	auto *layout = new QVBoxLayout(mFallbackWindow);
+	auto *notice = new QLabel(tr("No system tray is available. Select an interface to view its statistics."), mFallbackWindow);
+	notice->setWordWrap(true);
+	layout->addWidget(notice);
+	mFallbackInterfaces = new QListWidget(mFallbackWindow);
+	layout->addWidget(mFallbackInterfaces);
+
+	auto *buttons = new QHBoxLayout;
+	mFallbackStatistics = new QPushButton(tr("Statistics"), mFallbackWindow);
+	mFallbackStatistics->setEnabled(false);
+	mFallbackStatistics->setDefault(true);
+	auto *configure = new QPushButton(tr("Configure Interfaces"), mFallbackWindow);
+	auto *quit = new QPushButton(tr("Quit QNetStats"), mFallbackWindow);
+	buttons->addWidget(mFallbackStatistics);
+	buttons->addWidget(configure);
+	buttons->addWidget(quit);
+	layout->addLayout(buttons);
+
+	connect(mFallbackStatistics, &QPushButton::clicked, this, &QNetStats::showSelectedStatistics);
+	connect(mFallbackInterfaces, &QListWidget::itemActivated, this, &QNetStats::showSelectedStatistics);
+	connect(mFallbackInterfaces, &QListWidget::currentItemChanged, this, [this](QListWidgetItem *item) {
+		mFallbackStatistics->setEnabled(item != nullptr);
+	});
+	connect(configure, &QPushButton::clicked, this, &QNetStats::showConfigure);
+	connect(quit, &QPushButton::clicked, this, []() { QApplication::quit(); });
+	connect(mFallbackWindow, &QDialog::rejected, this, []() {
+		if (!QSystemTrayIcon::isSystemTrayAvailable())
+			QApplication::quit();
+	});
+
+	// Qt exposes tray availability as a query, without an availability-change signal.
+	auto *timer = new QTimer(this);
+	timer->setInterval(1000);
+	connect(timer, &QTimer::timeout, this, &QNetStats::updateFallbackWindow);
+	timer->start();
+}
+
+void QNetStats::updateFallbackWindow() {
+	if (QSystemTrayIcon::isSystemTrayAvailable()) {
+		mFallbackWindow->hide();
+		return;
+	}
+
+	QStringList names = mViews.keys();
+	names.sort();
+	QStringList displayed;
+	for (int i = 0; i < mFallbackInterfaces->count(); ++i)
+		displayed.append(mFallbackInterfaces->item(i)->text());
+	if (names != displayed) {
+		const auto *selected = mFallbackInterfaces->currentItem();
+		const QString selectedName = selected ? selected->text() : QString();
+		const QSignalBlocker blocker(mFallbackInterfaces);
+		mFallbackInterfaces->clear();
+		mFallbackInterfaces->addItems(names);
+		const auto matches = mFallbackInterfaces->findItems(selectedName, Qt::MatchExactly);
+		if (!matches.isEmpty())
+			mFallbackInterfaces->setCurrentItem(matches.first());
+		else if (!names.isEmpty())
+			mFallbackInterfaces->setCurrentRow(0);
+	}
+	mFallbackStatistics->setEnabled(mFallbackInterfaces->currentItem() != nullptr);
+	if (!mFallbackWindow->isVisible())
+		mFallbackWindow->show();
+}
+
+void QNetStats::showSelectedStatistics() {
+	const auto *item = mFallbackInterfaces->currentItem();
+	if (!item)
+		return;
+	auto *view = mViews.value(item->text(), nullptr);
+	if (view)
+		view->showStatistics();
+}
+
+void QNetStats::showConfigure() {
+	mConfigure->show();
+	mConfigure->raise();
+	mConfigure->activateWindow();
 }
 
 void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
