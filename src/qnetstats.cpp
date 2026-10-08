@@ -241,6 +241,9 @@ void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	opts->mDisplayTextStatistics = settings.value("DisplayTextStatistics", false).toBool();
 	opts->mTextDigit = std::clamp(settings.value("TextStatisticsDigit", 0).toInt(), 0, 9);
 	opts->mTextDigitPosition = std::clamp(settings.value("TextStatisticsDigitPosition", 0).toInt(), 0, 3);
+	opts->mTextShowDigit = settings.value("TextStatisticsShowDigit", true).toBool();
+	opts->mTextDigitMode = settings.value("TextStatisticsDigitMode", 0).toInt() == 1
+		? ViewOptions::ShadowTrafficText : ViewOptions::InvertTrafficText;
 	opts->mTextDigitColor = settings.value("TextStatisticsDigitColor", "#ffd700").toString();
 	opts->mTextUploadColor = settings.value("TextStatisticsUploadColor", "#FF0000").toString();
 	opts->mTextDownloadColor = settings.value("TextStatisticsDownloadColor", "#00FF00").toString();
@@ -279,6 +282,8 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 		settings.setValue("DisplayTextStatistics", opt.mDisplayTextStatistics);
 		settings.setValue("TextStatisticsDigit", opt.mTextDigit);
 		settings.setValue("TextStatisticsDigitPosition", opt.mTextDigitPosition);
+		settings.setValue("TextStatisticsShowDigit", opt.mTextShowDigit);
+		settings.setValue("TextStatisticsDigitMode", int(opt.mTextDigitMode));
 		settings.setValue("TextStatisticsDigitColor", opt.mTextDigitColor);
 		settings.remove("TextStatisticsColor");
 		settings.setValue("TextStatisticsUploadColor", opt.mTextUploadColor);

@@ -98,6 +98,8 @@ void Configure::storeCurrentOptions() {
 	view.mDisplayTextStatistics = mTextStatisticsGroup->isChecked();
 	view.mTextDigit = mTextDigit->currentIndex();
 	view.mTextDigitPosition = mTextDigitPosition->currentIndex();
+	view.mTextShowDigit = mTextShowDigit->isChecked();
+	view.mTextDigitMode = static_cast<ViewOptions::TextDigitMode>(mTextDigitMode->currentIndex());
 	view.mTextDigitColor = mTextDigitColor->color().name();
 	view.mTextUploadColor = mTextUploadColor->color().name();
 	view.mTextDownloadColor = mTextDownloadColor->color().name();
@@ -134,6 +136,8 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	mTextStatisticsGroup->setChecked(view.mDisplayTextStatistics);
 	mTextDigit->setCurrentIndex(view.mTextDigit);
 	mTextDigitPosition->setCurrentIndex(view.mTextDigitPosition);
+	mTextShowDigit->setChecked(view.mTextShowDigit);
+	mTextDigitMode->setCurrentIndex(int(view.mTextDigitMode));
 	mTextDigitColor->setColor(QColor(view.mTextDigitColor));
 	mTextUploadColor->setColor(QColor(view.mTextUploadColor));
 	mTextDownloadColor->setColor(QColor(view.mTextDownloadColor));
@@ -204,6 +208,8 @@ void Configure::setupTextStatisticsControls() {
 	mTextStatisticsGroup->setCheckable(true);
 	mTextStatisticsGroup->setChecked(false);
 	auto *form = new QFormLayout(mTextStatisticsGroup);
+	mTextShowDigit = new QCheckBox(tr("Show interface digit"), mTextStatisticsGroup);
+	form->addRow(mTextShowDigit);
 	mTextDigit = new QComboBox(mTextStatisticsGroup);
 	for (int digit = 0; digit <= 9; ++digit)
 		mTextDigit->addItem(QString::number(digit));
@@ -211,6 +217,9 @@ void Configure::setupTextStatisticsControls() {
 	mTextDigitPosition = new QComboBox(mTextStatisticsGroup);
 	mTextDigitPosition->addItems({tr("Top left"), tr("Top right"), tr("Bottom left"), tr("Bottom right")});
 	form->addRow(tr("Digit position:"), mTextDigitPosition);
+	mTextDigitMode = new QComboBox(mTextStatisticsGroup);
+	mTextDigitMode->addItems({tr("Invert overlapping traffic text"), tr("Shadow traffic text")});
+	form->addRow(tr("Overlap style:"), mTextDigitMode);
 	mTextDigitColor = new ColorButton(mTextStatisticsGroup);
 	form->addRow(tr("Digit color:"), mTextDigitColor);
 	mTextUploadColor = new ColorButton(mTextStatisticsGroup);
@@ -241,6 +250,8 @@ void Configure::setupTextStatisticsControls() {
 	connect(mMonitoringInterface, &QCheckBox::toggled, this, &Configure::updateTextStatisticsControls);
 	connect(mTextDigit, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsControls);
 	connect(mTextDigitPosition, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsPreview);
+	connect(mTextShowDigit, &QCheckBox::toggled, this, &Configure::updateTextStatisticsPreview);
+	connect(mTextDigitMode, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsPreview);
 	for (auto *button : {mTextDigitColor, mTextUploadColor, mTextDownloadColor, mTextBackgroundColor})
 		connect(button, &QPushButton::clicked, this, &Configure::updateTextStatisticsPreview);
 	connect(mTextTransparentBackground, &QCheckBox::toggled, this, [this](bool transparent) {
@@ -290,6 +301,10 @@ void Configure::updateTextStatisticsPreview() {
 	if (mLoadingOptions || mCurrentItem.isEmpty())
 		return;
 	storeCurrentOptions();
+	const bool showDigit = mTextShowDigit->isChecked();
+	mTextDigitPosition->setEnabled(showDigit);
+	mTextDigitColor->setEnabled(showDigit);
+	mTextDigitMode->setEnabled(showDigit);
 	const auto &view = mConfig[mCurrentItem];
 	mTextPreview16->setPixmap(QPixmap::fromImage(renderTextStatistics(view, "1.1M", "222K", 16)));
 	mTextPreview22->setPixmap(QPixmap::fromImage(renderTextStatistics(view, "1.1M", "222K", 22)));

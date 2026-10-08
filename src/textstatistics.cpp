@@ -3,6 +3,7 @@
 
 #include <QFontMetrics>
 #include <QPainter>
+#include <QPen>
 #include <QPixmap>
 #include <algorithm>
 #include <cmath>
@@ -47,7 +48,7 @@ int maximumRateWidth(const QFontMetrics &metrics) {
     return width;
 }
 
-void drawRate(QPainter &painter, QRect area, QFont font, const QString &text) {
+void drawRate(QPainter &painter, QRect area, QFont font, const QString &text, int shadowSize) {
     if (area.isEmpty())
         return;
     // Fit the largest size of the chosen family/style that accommodates every
@@ -63,6 +64,17 @@ void drawRate(QPainter &painter, QRect area, QFont font, const QString &text) {
     painter.setFont(font);
     painter.save();
     painter.setClipRect(area);
+    if (shadowSize > 0) {
+        const QPen textPen = painter.pen();
+        const QColor color = textPen.color();
+        // A thin contrasting halo separates the glyph from the digit behind it.
+        painter.setPen(qGray(color.rgb()) < 32 ? Qt::white : Qt::black);
+        for (int y = -shadowSize; y <= shadowSize; y += shadowSize)
+            for (int x = -shadowSize; x <= shadowSize; x += shadowSize)
+                if (x != 0 || y != 0)
+                    painter.drawText(area.translated(x, y), Qt::AlignRight | Qt::AlignVCenter, text.trimmed());
+        painter.setPen(textPen);
+    }
     painter.drawText(area, Qt::AlignRight | Qt::AlignVCenter, text.trimmed());
     painter.restore();
 }
@@ -86,7 +98,7 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
     const QPoint origin(right ? size - 3 * scale : 0, bottom ? size - 5 * scale : 0);
     // Only the top row reserves space for a top-corner identifier.
     // Download uses the full width, including either bottom corner.
-    if (!bottom) {
+    if (options.mTextShowDigit && !bottom) {
         if (right)
             uploadArea.setRight(size - 4 * scale - 1);
         else
@@ -94,17 +106,40 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
     }
 
     const int digit = std::clamp(options.mTextDigit, 0, 9);
-    for (int y = 0; y < 5; ++y)
-        for (int x = 0; x < 3; ++x)
-            if (digits[digit][y] & (1 << (2 - x)))
-                painter.fillRect(origin.x() + x * scale, origin.y() + y * scale,
-                                 scale, scale, QColor(options.mTextDigitColor));
-    // Paint rates last so download text overlays a bottom-corner digit.
-    painter.setRenderHint(QPainter::TextAntialiasing);
-    painter.setPen(QColor(options.mTextUploadColor));
-    drawRate(painter, uploadArea, options.mTextFont, upload);
-    painter.setPen(QColor(options.mTextDownloadColor));
-    drawRate(painter, downloadArea, options.mTextFont, download);
+    if (options.mTextShowDigit)
+        for (int y = 0; y < 5; ++y)
+            for (int x = 0; x < 3; ++x)
+                if (digits[digit][y] & (1 << (2 - x)))
+                    painter.fillRect(origin.x() + x * scale, origin.y() + y * scale,
+                                     scale, scale, QColor(options.mTextDigitColor));
+
+    // Keep glyph coverage separate from the digit and background. Only glyph
+    // pixels that intersect a lit digit pixel change color in inversion mode.
+    QImage rates(size, size, QImage::Format_ARGB32_Premultiplied);
+    rates.fill(Qt::transparent);
+    QPainter ratePainter(&rates);
+    ratePainter.setRenderHint(QPainter::TextAntialiasing);
+    const int shadowSize = options.mTextShowDigit &&
+        options.mTextDigitMode == ViewOptions::ShadowTrafficText ? scale : 0;
+    ratePainter.setPen(QColor(options.mTextUploadColor));
+    drawRate(ratePainter, uploadArea, options.mTextFont, upload, shadowSize);
+    ratePainter.setPen(QColor(options.mTextDownloadColor));
+    drawRate(ratePainter, downloadArea, options.mTextFont, download, shadowSize);
+    ratePainter.end();
+    if (options.mTextShowDigit && options.mTextDigitMode == ViewOptions::InvertTrafficText) {
+        for (int y = 0; y < 5 * scale; ++y)
+            for (int x = 0; x < 3 * scale; ++x) {
+                if (!(digits[digit][y / scale] & (1 << (2 - x / scale))))
+                    continue;
+                const int px = origin.x() + x;
+                const int py = origin.y() + y;
+                const QColor color = rates.pixelColor(px, py);
+                if (color.alpha() > 0)
+                    rates.setPixelColor(px, py, QColor(255 - color.red(), 255 - color.green(),
+                                                      255 - color.blue(), color.alpha()));
+            }
+    }
+    painter.drawImage(0, 0, rates);
     return image;
 }
 
