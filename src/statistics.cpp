@@ -5,7 +5,6 @@
 #include <QHostAddress>
 #include <QStringList>
 #include <QTimer>
-#include <QMenu>
 #include <QShowEvent>
 #include <QHideEvent>
 

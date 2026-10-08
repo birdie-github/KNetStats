@@ -1,14 +1,17 @@
 #ifndef KNETSTATSVIEW_H
 #define KNETSTATSVIEW_H
 
-#include <arpa/inet.h>
-#include <linux/netdevice.h>
 #include <QSystemTrayIcon>
+#include <QWidget>
+#include <QIcon>
 #include <QElapsedTimer>
 #include <dirent.h>
 #include "configure.h"
-#include "knetstats.h"
-#include "statistics.h"
+
+class KNetStats;
+class Statistics;
+class QMenu;
+class QTimer;
 
 class KNetStatsView : public QWidget {
 Q_OBJECT
@@ -37,8 +40,6 @@ public:
 	QString mInterface;                // Current interface
 
 	KNetStatsView(KNetStats *parent, const QString &interface);
-
-	~KNetStatsView() override { delete mStatistics; }
 
 	void updateViewOptions();
 
@@ -72,7 +73,7 @@ private:
 	Statistics *mStatistics;        // Statistics window
 	ViewOptions mOptions;            // View options
 	// Icons
-	QIcon mIconError, mIconNone, mIconTx, mIconRx, mIconBoth;
+	QIcon mIconNone, mIconTx, mIconRx, mIconBoth;
 	QIcon *mCurrentIcon{};            // Current state
 	QTimer *mTimer;                    // Timer
 	bool mFirstUpdate;

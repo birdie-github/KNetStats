@@ -1,6 +1,7 @@
 #include <QListWidget>
 #include <QNetworkInterface>
 #include <QMessageBox>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QShowEvent>
 #include <QStringList>
@@ -10,9 +11,9 @@
 
 #include "ui_configurebase.h"
 
-Configure::Configure(QWidget *parent) : QDialog(parent), Ui::ConfigureBase() {
+Configure::Configure(QWidget *parent)
+		: QDialog(parent), Ui::ConfigureBase(), mInterfaceIcon(":/img/icon_pci.png") {
 	setupUi(this);
-	mInterfaceIcon = new QIcon(":/img/icon_pci.png");
 	mInterfaces->setViewMode(QListWidget::ListMode);
 
 	refreshInterfaces();
@@ -57,7 +58,7 @@ void Configure::refreshInterfaces() {
 		const QSignalBlocker blocker(mInterfaces);
 		mInterfaces->clear();
 		for (auto it = mConfig.constBegin(); it != mConfig.constEnd(); ++it) {
-			auto *item = new QListWidgetItem(*mInterfaceIcon, it.key(), mInterfaces);
+			auto *item = new QListWidgetItem(mInterfaceIcon, it.key(), mInterfaces);
 			if (!available.contains(it.key())) {
 				item->setIcon(QIcon(":/img/interfaces_missing.png"));
 				item->setToolTip(tr("Interface currently unavailable"));

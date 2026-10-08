@@ -1,9 +1,8 @@
 #ifndef KNETSTATS_H
 #define KNETSTATS_H
 
-#include <set>
 #include "configure.h"
-#include <QSettings>
+#include <QHash>
 #include <QSystemTrayIcon>
 
 class KNetStatsView;

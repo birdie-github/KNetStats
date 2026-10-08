@@ -106,13 +106,10 @@ void KNetStats::configApply() {
 
 void KNetStats::saveConfig(const OptionsMap &options) {
 	QSettings settings;
-	QStringList ifs;
 
 	for (OptionsMap::ConstIterator i = options.begin(); i != options.end(); ++i) {
 		TrayIconMap::Iterator trayIcon = mViews.find(i.key());
 		const ViewOptions &opt = i.value();
-
-		ifs.push_back(i.key());
 
 		settings.beginGroup(i.key());
 		// General Options
@@ -143,6 +140,5 @@ void KNetStats::saveConfig(const OptionsMap &options) {
 		checkTrayIconsAvailable();
 	}
 
-	settings.setValue("AllViews", ifs);
 	settings.setValue("CurrentViews", QStringList(mViews.keys()));
 }

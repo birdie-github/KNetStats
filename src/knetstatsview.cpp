@@ -1,18 +1,17 @@
 #include "knetstatsview.h"
 #include "knetstats.h"
 #include <QTimer>
-#include <qevent.h>
-#include <qpainter.h>
 
 #include <QMenu>
 #include <fstream>
+#include <cstdio>
 #include <algorithm>
 #include "statistics.h"
 
 extern const char *programName;
 
 KNetStatsView::KNetStatsView(KNetStats *parent, const QString &interface)
-		: mParent(parent), mSysDevPath("/sys/class/net/" + interface + "/") {
+		: QWidget(parent), mParent(parent), mSysDevPath("/sys/class/net/" + interface + "/") {
 	mInterface = interface;
 	mCarrier = interfaceIsValid();
 	mFirstUpdate = true;
@@ -44,7 +43,6 @@ void KNetStatsView::setupView() {
 
 void KNetStatsView::setupTrayIcon() {
 	// Load Icons
-	mIconError = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_error.png");
 	mIconNone = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_none.png");
 	mIconTx = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_tx.png");
 	mIconRx = QIcon(":/img/theme" + QString::number(mOptions.mTheme) + "_rx.png");

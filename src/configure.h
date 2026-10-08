@@ -3,9 +3,7 @@
 
 #include <QString>
 #include <QMap>
-#include <QFont>
-#include <QColor>
-#include <QNetworkInterface>
+#include <QIcon>
 
 #include "ui_configurebase.h"
 
@@ -49,7 +47,7 @@ private:
 	void storeCurrentOptions();
 	QString mCurrentItem;
 	OptionsMap mConfig;
-	QIcon *mInterfaceIcon;
+	QIcon mInterfaceIcon;
 
 private slots:
 

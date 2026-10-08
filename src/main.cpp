@@ -1,12 +1,10 @@
 #include <QApplication>
-#include <QResource>
 
 #include "knetstats.h"
 
 const char *programName = "KNetStats";
 
 int main(int argc, char **argv) {
-	QResource::registerResource("knetstats.rcc");
 	QApplication::setOrganizationName("KNetStats");
 	QApplication::setApplicationName("KNetStats");
 	QApplication::setDesktopFileName("com.birdie-github.KNetStats");
