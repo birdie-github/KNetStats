@@ -17,9 +17,12 @@ used digits cannot be selected for another monitored text icon. This limits text
 icons to ten interfaces, without limiting ordinary interface monitoring.
 
 The separate text statistics section offers all four digit corners, digit and
-statistics colors, background color, a statistics font, and actual-size previews.
+separate upload/download colors (red/green by default), a background color or
+transparent background, a statistics font, and actual-size previews.
 The font family and style are honored; its size is fitted automatically to use
-as much space as possible without overlapping the digit. The digit stays assigned
+as much space as possible. The top row reserves space for a top-corner digit;
+the bottom row always uses the full width and draws its text over a bottom-corner
+digit. The digit stays assigned
 when an interface disconnects, and unavailable rates appear as dashes. Hover for
 the interface name and full rates; click either icon to toggle its statistics.
 

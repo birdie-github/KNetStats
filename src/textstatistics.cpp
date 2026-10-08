@@ -73,8 +73,10 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
     if (size < 8)
         return QImage();
     QImage image(size, size, QImage::Format_ARGB32_Premultiplied);
-    // Opaque pixels also make the whole icon clickable with legacy X11 trays.
-    image.fill(QColor(options.mTextBackgroundColor));
+    if (options.mTextTransparentBackground)
+        image.fill(Qt::transparent);
+    else
+        image.fill(QColor(options.mTextBackgroundColor));
     QPainter painter(&image);
     QRect uploadArea(0, 0, size, size / 2);
     QRect downloadArea(0, size / 2, size, size - size / 2);
@@ -82,22 +84,27 @@ QImage renderTextStatistics(const ViewOptions &options, const QString &upload,
     const bool right = options.mTextDigitPosition == 1 || options.mTextDigitPosition == 3;
     const bool bottom = options.mTextDigitPosition >= 2;
     const QPoint origin(right ? size - 3 * scale : 0, bottom ? size - 5 * scale : 0);
-    QRect &badgeRow = bottom ? downloadArea : uploadArea;
-    if (right)
-        badgeRow.setRight(size - 4 * scale - 1);
-    else
-        badgeRow.setLeft(4 * scale);
+    // Only the top row reserves space for a top-corner identifier.
+    // Download uses the full width, including either bottom corner.
+    if (!bottom) {
+        if (right)
+            uploadArea.setRight(size - 4 * scale - 1);
+        else
+            uploadArea.setLeft(4 * scale);
+    }
 
-    painter.setPen(QColor(options.mTextColor));
-    painter.setRenderHint(QPainter::TextAntialiasing);
-    drawRate(painter, uploadArea, options.mTextFont, upload);
-    drawRate(painter, downloadArea, options.mTextFont, download);
     const int digit = std::clamp(options.mTextDigit, 0, 9);
     for (int y = 0; y < 5; ++y)
         for (int x = 0; x < 3; ++x)
             if (digits[digit][y] & (1 << (2 - x)))
                 painter.fillRect(origin.x() + x * scale, origin.y() + y * scale,
                                  scale, scale, QColor(options.mTextDigitColor));
+    // Paint rates last so download text overlays a bottom-corner digit.
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    painter.setPen(QColor(options.mTextUploadColor));
+    drawRate(painter, uploadArea, options.mTextFont, upload);
+    painter.setPen(QColor(options.mTextDownloadColor));
+    drawRate(painter, downloadArea, options.mTextFont, download);
     return image;
 }
 

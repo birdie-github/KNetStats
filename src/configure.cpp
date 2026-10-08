@@ -99,8 +99,10 @@ void Configure::storeCurrentOptions() {
 	view.mTextDigit = mTextDigit->currentIndex();
 	view.mTextDigitPosition = mTextDigitPosition->currentIndex();
 	view.mTextDigitColor = mTextDigitColor->color().name();
-	view.mTextColor = mTextColor->color().name();
+	view.mTextUploadColor = mTextUploadColor->color().name();
+	view.mTextDownloadColor = mTextDownloadColor->color().name();
 	view.mTextBackgroundColor = mTextBackgroundColor->color().name();
+	view.mTextTransparentBackground = mTextTransparentBackground->isChecked();
 	view.mTextFont = mSelectedTextFont;
 	view.mUpdateInterval = mUpdateInterval->value();
 	view.mTheme = mTheme->currentIndex();
@@ -133,8 +135,11 @@ void Configure::changeInterface(QListWidgetItem *item) {
 	mTextDigit->setCurrentIndex(view.mTextDigit);
 	mTextDigitPosition->setCurrentIndex(view.mTextDigitPosition);
 	mTextDigitColor->setColor(QColor(view.mTextDigitColor));
-	mTextColor->setColor(QColor(view.mTextColor));
+	mTextUploadColor->setColor(QColor(view.mTextUploadColor));
+	mTextDownloadColor->setColor(QColor(view.mTextDownloadColor));
 	mTextBackgroundColor->setColor(QColor(view.mTextBackgroundColor));
+	mTextTransparentBackground->setChecked(view.mTextTransparentBackground);
+	mTextBackgroundColor->setEnabled(!view.mTextTransparentBackground);
 	mSelectedTextFont = view.mTextFont;
 	mTextFontButton->setText(mSelectedTextFont.family());
 	mUpdateInterval->setValue(view.mUpdateInterval);
@@ -208,10 +213,14 @@ void Configure::setupTextStatisticsControls() {
 	form->addRow(tr("Digit position:"), mTextDigitPosition);
 	mTextDigitColor = new ColorButton(mTextStatisticsGroup);
 	form->addRow(tr("Digit color:"), mTextDigitColor);
-	mTextColor = new ColorButton(mTextStatisticsGroup);
-	form->addRow(tr("Statistics color:"), mTextColor);
+	mTextUploadColor = new ColorButton(mTextStatisticsGroup);
+	form->addRow(tr("Upload color:"), mTextUploadColor);
+	mTextDownloadColor = new ColorButton(mTextStatisticsGroup);
+	form->addRow(tr("Download color:"), mTextDownloadColor);
 	mTextBackgroundColor = new ColorButton(mTextStatisticsGroup);
 	form->addRow(tr("Background color:"), mTextBackgroundColor);
+	mTextTransparentBackground = new QCheckBox(tr("Transparent background"), mTextStatisticsGroup);
+	form->addRow(mTextTransparentBackground);
 	mTextFontButton = new QPushButton(tr("Choose Font"), mTextStatisticsGroup);
 	form->addRow(tr("Statistics font:"), mTextFontButton);
 	auto *previews = new QHBoxLayout;
@@ -232,8 +241,12 @@ void Configure::setupTextStatisticsControls() {
 	connect(mMonitoringInterface, &QCheckBox::toggled, this, &Configure::updateTextStatisticsControls);
 	connect(mTextDigit, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsControls);
 	connect(mTextDigitPosition, qOverload<int>(&QComboBox::activated), this, &Configure::updateTextStatisticsPreview);
-	for (auto *button : {mTextDigitColor, mTextColor, mTextBackgroundColor})
+	for (auto *button : {mTextDigitColor, mTextUploadColor, mTextDownloadColor, mTextBackgroundColor})
 		connect(button, &QPushButton::clicked, this, &Configure::updateTextStatisticsPreview);
+	connect(mTextTransparentBackground, &QCheckBox::toggled, this, [this](bool transparent) {
+		mTextBackgroundColor->setEnabled(!transparent);
+		updateTextStatisticsPreview();
+	});
 	connect(mTextFontButton, &QPushButton::clicked, this, [this]() {
 		bool accepted = false;
 		const QFont selected = QFontDialog::getFont(&accepted, mSelectedTextFont, this, tr("Statistics Font"));

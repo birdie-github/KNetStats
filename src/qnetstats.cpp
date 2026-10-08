@@ -242,8 +242,10 @@ void QNetStats::readInterfaceConfig(const QString &ifName, ViewOptions *opts) {
 	opts->mTextDigit = std::clamp(settings.value("TextStatisticsDigit", 0).toInt(), 0, 9);
 	opts->mTextDigitPosition = std::clamp(settings.value("TextStatisticsDigitPosition", 0).toInt(), 0, 3);
 	opts->mTextDigitColor = settings.value("TextStatisticsDigitColor", "#ffd700").toString();
-	opts->mTextColor = settings.value("TextStatisticsColor", "#ffffff").toString();
+	opts->mTextUploadColor = settings.value("TextStatisticsUploadColor", "#FF0000").toString();
+	opts->mTextDownloadColor = settings.value("TextStatisticsDownloadColor", "#00FF00").toString();
 	opts->mTextBackgroundColor = settings.value("TextStatisticsBackgroundColor", "#202020").toString();
+	opts->mTextTransparentBackground = settings.value("TextStatisticsTransparentBackground", false).toBool();
 	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	font.setBold(true);
 	opts->mTextFont = settings.value("TextStatisticsFont", QVariant::fromValue(font)).value<QFont>();
@@ -278,8 +280,11 @@ void QNetStats::saveConfig(const OptionsMap &options) {
 		settings.setValue("TextStatisticsDigit", opt.mTextDigit);
 		settings.setValue("TextStatisticsDigitPosition", opt.mTextDigitPosition);
 		settings.setValue("TextStatisticsDigitColor", opt.mTextDigitColor);
-		settings.setValue("TextStatisticsColor", opt.mTextColor);
+		settings.remove("TextStatisticsColor");
+		settings.setValue("TextStatisticsUploadColor", opt.mTextUploadColor);
+		settings.setValue("TextStatisticsDownloadColor", opt.mTextDownloadColor);
 		settings.setValue("TextStatisticsBackgroundColor", opt.mTextBackgroundColor);
+		settings.setValue("TextStatisticsTransparentBackground", opt.mTextTransparentBackground);
 		settings.setValue("TextStatisticsFont", QVariant::fromValue(opt.mTextFont));
 		settings.setValue("Theme", opt.mTheme);
 		// Chart Options

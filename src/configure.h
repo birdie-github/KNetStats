@@ -18,8 +18,10 @@ struct ViewOptions {
 	int mTextDigit;
 	int mTextDigitPosition;
 	QString mTextDigitColor;
-	QString mTextColor;
+	QString mTextUploadColor;
+	QString mTextDownloadColor;
 	QString mTextBackgroundColor;
+	bool mTextTransparentBackground;
 	QFont mTextFont;
 	// icon view
 	int mTheme;
@@ -66,8 +68,10 @@ private:
 	QComboBox *mTextDigit;
 	QComboBox *mTextDigitPosition;
 	ColorButton *mTextDigitColor;
-	ColorButton *mTextColor;
+	ColorButton *mTextUploadColor;
+	ColorButton *mTextDownloadColor;
 	ColorButton *mTextBackgroundColor;
+	QCheckBox *mTextTransparentBackground;
 	QPushButton *mTextFontButton;
 	QLabel *mTextPreview16;
 	QLabel *mTextPreview22;
