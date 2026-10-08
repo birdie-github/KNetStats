@@ -57,9 +57,9 @@ target_link_libraries(knetstats PRIVATE
 )
 
 install(TARGETS knetstats RUNTIME)
-install(FILES dist/com.telans.KNetStats.desktop
+install(FILES dist/com.birdie-github.KNetStats.desktop
         DESTINATION share/applications)
-install(FILES dist/com.telans.KNetStats.appdata.xml
+install(FILES dist/com.birdie-github.KNetStats.appdata.xml
         DESTINATION share/metainfo)
 install(DIRECTORY dist/hicolor
         DESTINATION share/icons)

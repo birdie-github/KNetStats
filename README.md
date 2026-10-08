@@ -1,5 +1,5 @@
 <h1>
-  <img src="https://raw.githubusercontent.com/telans/KNetStats/main/dist/hicolor/32x32/apps/com.telans.KNetStats.png" alt="KNetStats Icon">
+  <img src="https://raw.githubusercontent.com/birdie-github/KNetStats/main/dist/hicolor/32x32/apps/com.birdie-github.KNetStats.png" alt="KNetStats Icon">
   KNetStats
 </h1>
 
@@ -10,17 +10,17 @@
 
 ## Screenshots:
 
-![Statistics Window](https://raw.githubusercontent.com/telans/KNetStats/main/.github/screenshots/StatisticsWindow.png)
-![Configure Window](https://raw.githubusercontent.com/telans/KNetStats/main/.github/screenshots/ConfigureWindow.png)
+![Statistics Window](https://raw.githubusercontent.com/birdie-github/KNetStats/main/.github/screenshots/StatisticsWindow.png)
+![Configure Window](https://raw.githubusercontent.com/birdie-github/KNetStats/main/.github/screenshots/ConfigureWindow.png)
 
 <p>
   Preview of tray icons with different themes:
-  <img align="center" src="https://raw.githubusercontent.com/telans/KNetStats/main/.github/screenshots/TrayIcons.png" alt="Tray Icons Preview">
+  <img align="center" src="https://raw.githubusercontent.com/birdie-github/KNetStats/main/.github/screenshots/TrayIcons.png" alt="Tray Icons Preview">
 </p>
 
 ## Installation:
 
-If you wish to install a prebuilt release, please check the <a href=https://github.com/telans/KNetStats/releases>Releases page</a>. An AUR package exists under the name <a href="https://aur.archlinux.org/packages/knetstats">knetstats</a>. \
+If you wish to install a prebuilt release, please check the <a href=https://github.com/birdie-github/KNetStats/releases>Releases page</a>. An AUR package exists under the name <a href="https://aur.archlinux.org/packages/knetstats">knetstats</a>. \
 Otherwise, building instructions are provided below:
 
 ### Prerequisites:
@@ -38,7 +38,7 @@ Manually building KNetStats requires Git and the following packages to be instal
 
 ```bash
 # Clone and enter this repository
-$ git clone https://github.com/telans/KNetStats && cd KNetStats
+$ git clone https://github.com/birdie-github/KNetStats && cd KNetStats
  
 # Configure and build the program
 $ cmake -B build

@@ -5,8 +5,8 @@ Summary:	Network interface and statistics viewer
 
 Group:		Productivity/Network/Viewers
 License:	GPL-2
-URL:		https://github.com/telans/KNetStats
-Source:	    https://github.com/telans/KNetStats/archive/v%{version}.tar.gz
+URL:		https://github.com/birdie-github/KNetStats
+Source:	    https://github.com/birdie-github/KNetStats/archive/v%{version}.tar.gz
 
 BuildRequires: cmake
 BuildRequires: pkgconfig
