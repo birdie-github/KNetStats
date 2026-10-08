@@ -1,7 +1,13 @@
 #include <QtGlobal>
 #ifdef Q_OS_WIN
 #include <winsock2.h>
+// MinGW exposes MIB_IF_ROW2 and GetIfEntry2 only with these definitions.
+#include <ws2ipdef.h>
 #include <iphlpapi.h>
+// The Windows COM headers define this common C++ identifier as a macro.
+#ifdef interface
+#undef interface
+#endif
 #include <QUuid>
 #else
 #include <fstream>
