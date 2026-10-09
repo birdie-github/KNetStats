@@ -35,7 +35,7 @@ extern const char *programName;
 namespace {
 ViewOptions defaultInterfaceOptions(const QString &name) {
 	int theme = name.startsWith("wlan") ? 3 : 0;
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
 	if (QNetworkInterface::interfaceFromName(name).type() == QNetworkInterface::Wifi)
 		theme = 3;
 #endif
@@ -179,6 +179,7 @@ void QNetStats::setupBackupTrayIcon() {
 	mContextMenu->addAction("Quit QNetStats", this, []() { QApplication::quit(); });
 	mBackupTrayIcon->setContextMenu(mContextMenu);
 
+#ifndef Q_OS_MACOS
 	connect(mBackupTrayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
 		if (reason != QSystemTrayIcon::Trigger)
 			return;
@@ -188,6 +189,7 @@ void QNetStats::setupBackupTrayIcon() {
 		}
 		mConfigure->show();
 	});
+#endif
 }
 
 void QNetStats::setupFallbackWindow() {

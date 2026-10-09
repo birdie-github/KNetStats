@@ -5,7 +5,7 @@
 
 ---
 
-<p>A simple network interface and statistics viewer for Linux and Windows 10/11 based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
+<p>A simple network interface and statistics viewer for Linux, Windows 10/11, and macOS based on the <a href="https://knetstats.sourceforge.net/"> KDE 3 project KNetStats</a> by Hugo Parente Lima (hugo_pl).</p>
 <p>QNetStats is a simple Qt network interface and statistics viewer with an associated tray icon to monitor activity.<br>It displays and graphs data transmission information for easy visualization. It also displays information such as associated IPs and MAC addresses.</p>
 
 ## Text statistics tray icons
@@ -30,7 +30,8 @@ interface digit wherever they overlap. A **Show interface digit** checkbox hides
 assignment. An independent **Text shadow** checkbox adds a thin contrasting
 shadow around the traffic text, including when the digit is hidden. The digit stays assigned
 when an interface disconnects, and unavailable rates appear as dashes. Hover for
-the interface name and full rates; click either icon to toggle its statistics.
+the interface name and full rates; click either icon to toggle its statistics
+(on macOS, choose **Statistics** from its menu).
 
 **Display Tray Icon** controls the original activity icon independently.
 **Notify Interface Changes** controls connection notifications. With both kinds
@@ -89,7 +90,7 @@ Otherwise, building instructions are provided below:
 
 An RPM SPEC file (untested) and an Arch PKGBUILD is provided within `dist/`. You can use those to install QNetStats on the appropriate distros.
 
-QNetStats supports Qt 5.11 or newer and Qt 6 on Linux and Windows 10/11, using Qt Widgets and Qt Network. KDE Frameworks are not required.
+QNetStats supports Qt 5.11 or newer and Qt 6 on Linux, Windows 10/11, and macOS, using Qt Widgets and Qt Network. KDE Frameworks are not required.
 CMake prefers Qt6 when available and otherwise uses Qt5. The provided packaging definitions select Qt6 explicitly.
 
 Manually building QNetStats requires Git and the following packages to be installed
@@ -125,6 +126,48 @@ cmake --build build-qt6
 ```
 
 The default is `-DUSE_QT=AUTO`. An explicitly selected version must be installed; CMake will not fall back to another version.
+
+### macOS
+
+Install the Xcode Command Line Tools (`xcode-select --install`), Homebrew, and
+Qt. Both Apple Silicon and Intel Macs are supported; the minimum macOS version
+is determined by the installed Qt kit.
+
+```bash
+brew install cmake ninja qt
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_QT=6 \
+  -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+cmake --build build
+open build/QNetStats.app
+```
+
+For Qt5, install `qt@5`, use `-DUSE_QT=5` and
+`-DCMAKE_PREFIX_PATH="$(brew --prefix qt@5)"` in a separate build directory.
+To make a self-contained Qt6 bundle before copying it to `/Applications`:
+
+```bash
+cp COPYING build/QNetStats.app/Contents/Resources/LICENSE.txt
+"$(brew --prefix qt)/bin/macdeployqt" build/QNetStats.app
+codesign --force --deep --sign - build/QNetStats.app
+```
+
+`cmake --install build --prefix /Applications` installs the app bundle.
+Deploy Qt before installing if the app must run without the build machine's Qt.
+CI builds and packages Qt5 and Qt6 bundles in DMG images separately for arm64
+and x86_64. It checks bundled dependencies and signatures before packaging.
+These packages are ad-hoc signed, without Developer ID signing or notarization;
+Gatekeeper may require approval when opening a downloaded app.
+
+QNetStats runs in the menu bar without a Dock icon. Click an interface icon and
+choose **Statistics** to open its window; **Configure Interfaces** and **Quit
+QNetStats** are available from every icon. Traffic counters use the native
+`NET_RT_IFLIST2` sysctl API with 64-bit byte and packet counters, without root
+privileges. Interface availability uses its native index; connection state uses
+Qt's up/running flags and native media status where supported, with a flag-based
+fallback for virtual interfaces. IP addresses, netmasks, MTU,
+and MAC addresses use Qt Network as on the other platforms. Settings use Qt's
+native preferences storage. Notification delivery depends on macOS permissions
+and Qt support.
 
 ### Windows 10 and 11
 

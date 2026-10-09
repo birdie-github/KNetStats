@@ -9,7 +9,20 @@
 #undef interface
 #endif
 #include <QUuid>
-#else
+#elif defined(Q_OS_MACOS)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <net/if.h>
+#include <net/route.h>
+#include <net/if_media.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <QNetworkInterface>
+#include <cerrno>
+#include <cstring>
+#include <vector>
+#elif defined(Q_OS_LINUX)
 #include <fstream>
 #include <cstdio>
 #include <QFileInfo>
@@ -49,9 +62,56 @@ bool readWindowsInterface(const QString &name, MIB_IF_ROW2 &row) {
 }
 #endif
 
+#ifdef Q_OS_MACOS
+namespace {
+bool readMacInterfaceCounters(const QString &name, if_data64 &counters) {
+	const QByteArray encoded = name.toLocal8Bit();
+	const unsigned int index = if_nametoindex(encoded.constData());
+	if (index == 0)
+		return false;
+	int mib[] = {CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST2, static_cast<int>(index)};
+	// Address changes can grow the result between the size query and read.
+	for (int attempt = 0; attempt < 3; ++attempt) {
+		size_t size = 0;
+		if (sysctl(mib, 6, nullptr, &size, nullptr, 0) != 0 || size == 0)
+			return false;
+		std::vector<unsigned char> buffer(size);
+		if (sysctl(mib, 6, buffer.data(), &size, nullptr, 0) != 0) {
+			if (errno == ENOMEM)
+				continue;
+			return false;
+		}
+		if (size > buffer.size())
+			return false;
+		for (size_t offset = 0; size - offset >= 4;) {
+			const unsigned char *message = buffer.data() + offset;
+			unsigned short length = 0;
+			std::memcpy(&length, message, sizeof(length));
+			if (length < 4 || length > size - offset)
+				return false;
+			if (message[2] == RTM_VERSION && message[3] == RTM_IFINFO2) {
+				if (length < sizeof(if_msghdr2))
+					return false;
+				// Routing messages need not be aligned for direct struct access.
+				if_msghdr2 row{};
+				std::memcpy(&row, message, sizeof(row));
+				if (row.ifm_index == index) {
+					counters = row.ifm_data;
+					return true;
+				}
+			}
+			offset += length;
+		}
+		return false;
+	}
+	return false;
+}
+}
+#endif
+
 QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 		: QWidget(parent), mParent(parent)
-#ifndef Q_OS_WIN
+#ifdef Q_OS_LINUX
 		, mSysDevPath("/sys/class/net/" + interface + "/")
 #endif
 		{
@@ -64,6 +124,9 @@ QNetStatsView::QNetStatsView(QNetStats *parent, const QString &interface)
 	mTrayIcon = new QSystemTrayIcon(this);
 	mTextTrayIcon = new QSystemTrayIcon(this);
 	mContextMenu = new QMenu(this);
+#ifdef Q_OS_MACOS
+	mContextMenu->addAction(tr("Statistics"), this, &QNetStatsView::showStatistics);
+#endif
 	mContextMenu->addAction("Configure Interfaces", parent, &QNetStats::showConfigure);
 	mContextMenu->addAction("Quit QNetStats", parent, []() { QApplication::quit(); });
 
@@ -255,6 +318,8 @@ bool QNetStatsView::interfaceIsValid() const {
 #ifdef Q_OS_WIN
 	MIB_IF_ROW2 row{};
 	return readWindowsInterface(mInterface, row);
+#elif defined(Q_OS_MACOS)
+	return readInterfaceIdentity() != 0;
 #else
 	return QFileInfo(mSysDevPath).isDir();
 #endif
@@ -264,6 +329,24 @@ bool QNetStatsView::interfaceHasCarrier() const {
 #ifdef Q_OS_WIN
 	MIB_IF_ROW2 row{};
 	return readWindowsInterface(mInterface, row) && row.OperStatus == IfOperStatusUp;
+#elif defined(Q_OS_MACOS)
+	const auto flags = QNetworkInterface::interfaceFromName(mInterface).flags();
+	if (!flags.testFlag(QNetworkInterface::IsUp) || !flags.testFlag(QNetworkInterface::IsRunning))
+		return false;
+	// Up/running alone can stay set when a physical link is disconnected.
+	// Virtual interfaces may not implement the media query; retain Qt's flags.
+	const QByteArray encoded = mInterface.toLocal8Bit();
+	if (encoded.isEmpty() || encoded.size() >= IFNAMSIZ)
+		return false;
+	const int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd < 0)
+		return true;
+	struct ifmediareq request{};
+	std::memcpy(request.ifm_name, encoded.constData(), encoded.size());
+	const bool hasMediaStatus = ioctl(fd, SIOCGIFMEDIA, &request) == 0 &&
+		(request.ifm_status & IFM_AVALID);
+	::close(fd);
+	return !hasMediaStatus || (request.ifm_status & IFM_ACTIVE);
 #else
 	FILE *file = fopen((mSysDevPath + "carrier").toLatin1(), "r");
 	if (!file)
@@ -279,6 +362,8 @@ quint64 QNetStatsView::readInterfaceIdentity() const {
 #ifdef Q_OS_WIN
 	MIB_IF_ROW2 row{};
 	return readWindowsInterface(mInterface, row) ? row.InterfaceLuid.Value : 0;
+#elif defined(Q_OS_MACOS)
+	return if_nametoindex(mInterface.toLocal8Bit().constData());
 #else
 	unsigned int index{};
 	std::ifstream file((mSysDevPath + "ifindex").toLatin1());
@@ -301,6 +386,15 @@ bool QNetStatsView::readInterfaceCounters(unsigned long long &brx, unsigned long
 	prx = row.InUcastPkts + row.InNUcastPkts;
 	ptx = row.OutUcastPkts + row.OutNUcastPkts;
 	return true;
+#elif defined(Q_OS_MACOS)
+	if_data64 counters{};
+	if (!readMacInterfaceCounters(mInterface, counters))
+		return false;
+	brx = counters.ifi_ibytes;
+	btx = counters.ifi_obytes;
+	prx = counters.ifi_ipackets;
+	ptx = counters.ifi_opackets;
+	return true;
 #else
 	return readInterfaceNumValue("rx_bytes", brx) &&
 		readInterfaceNumValue("tx_bytes", btx) &&
@@ -309,7 +403,7 @@ bool QNetStatsView::readInterfaceCounters(unsigned long long &brx, unsigned long
 #endif
 }
 
-#ifndef Q_OS_WIN
+#ifdef Q_OS_LINUX
 bool QNetStatsView::readInterfaceNumValue(const char *name, unsigned long long &value) const {
 	std::ifstream file((mSysDevPath + "statistics/" + name).toLatin1());
 	return bool(file >> value);
@@ -339,12 +433,17 @@ void QNetStatsView::showStatistics() {
 }
 
 void QNetStatsView::iconActivated(QSystemTrayIcon::ActivationReason reason) {
+#ifdef Q_OS_MACOS
+	// Cocoa opens the context menu on mouse press; use its Statistics action.
+	Q_UNUSED(reason);
+#else
 	if (reason == QSystemTrayIcon::ActivationReason::Trigger) {
 		if (mStatistics->isVisible())
 			mStatistics->hideWindow();
 		else
 			showStatistics();
 	}
+#endif
 }
 
 void QNetStatsView::updateTextTrayIcon(bool force) {

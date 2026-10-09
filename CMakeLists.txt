@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(qnetstats)
 
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT WIN32)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT WIN32)
     message(FATAL_ERROR "Building QNetStats is not supported on ${CMAKE_SYSTEM_NAME}")
 endif()
 
@@ -67,7 +67,17 @@ if(WIN32)
     endif()
 endif()
 
-install(TARGETS qnetstats RUNTIME)
+if(APPLE)
+    set_target_properties(qnetstats PROPERTIES
+        MACOSX_BUNDLE TRUE
+        OUTPUT_NAME QNetStats
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/dist/macos/Info.plist.in")
+    target_sources(qnetstats PRIVATE dist/macos/QNetStats.icns)
+    set_source_files_properties(dist/macos/QNetStats.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources)
+endif()
+
+install(TARGETS qnetstats RUNTIME DESTINATION bin BUNDLE DESTINATION .)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     install(FILES dist/com.birdie-github.QNetStats.desktop
             DESTINATION share/applications)

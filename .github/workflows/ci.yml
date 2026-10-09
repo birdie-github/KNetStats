@@ -1,4 +1,4 @@
-name: Windows build and package
+name: Windows and macOS build and package
 
 on:
   push:
@@ -80,5 +80,159 @@ jobs:
         with:
           name: QNetStats-Windows-x64-Qt6-${{ github.sha }}
           path: build/package/
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: macOS ${{ matrix.arch }} (Qt ${{ matrix.qt }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        qt: ['5', '6']
+        arch: [arm64, x86_64]
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x86_64
+            runner: macos-15-intel
+          - qt: '5'
+            formula: qt@5
+          - qt: '6'
+            formula: qt
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install macOS build dependencies
+        run: brew install cmake ninja "${{ matrix.formula }}"
+
+      - name: Build QNetStats
+        run: |
+          set -euo pipefail
+          qt_prefix="$(brew --prefix "${{ matrix.formula }}")"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_QT=${{ matrix.qt }} -DCMAKE_PREFIX_PATH="$qt_prefix" \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+          cmake --build build --parallel 3
+
+      - name: Deploy, sign and package macOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          qt_prefix="$(brew --prefix "${{ matrix.formula }}")"
+          qt_bin="$qt_prefix/bin"
+          export PATH="$qt_bin:$PATH"
+          cd build
+          bundle=QNetStats.app
+          test -d "$bundle"
+          test "$(uname -m)" = "${{ matrix.arch }}"
+          lipo "$bundle/Contents/MacOS/QNetStats" -verify_arch "${{ matrix.arch }}"
+          cp ../COPYING "$bundle/Contents/Resources/LICENSE.txt"
+
+          # Stage the plugin types used by this Widgets application. Keep all
+          # image formats, but exclude the unused QML virtual keyboard.
+          qt_plugins="$("$qt_bin/qmake" -query QT_INSTALL_PLUGINS)"
+          deploy_args=(-no-plugins -verbose=2 -no-codesign)
+          shopt -s nullglob
+          for plugin_type in platforms styles tls networkinformation imageformats iconengines; do
+            for plugin in "$qt_plugins/$plugin_type/"*.dylib; do
+              plugin_name="${plugin##*/}"
+              case "$plugin_name" in
+                *_debug.dylib|libqtvirtualkeyboard*.dylib) continue ;;
+              esac
+              if [ "$plugin_type" = platforms ] && [ "$plugin_name" != libqcocoa.dylib ]; then
+                continue
+              fi
+              mkdir -p "$bundle/Contents/PlugIns/$plugin_type"
+              destination="$bundle/Contents/PlugIns/$plugin_type/$plugin_name"
+              cp "$plugin" "$destination"
+              deploy_args+=("-executable=$destination")
+            done
+          done
+
+          # Homebrew installs Qt frameworks in separate formula directories.
+          # Search them without copying modules that no retained binary uses.
+          brew_prefix="$(brew --prefix)"
+          deploy_args+=("-libpath=$brew_prefix/lib"
+            "-libpath=$qt_prefix/lib")
+          for qt_lib in "$brew_prefix"/opt/qt*/lib; do
+            [ -d "$qt_lib" ] && deploy_args+=("-libpath=$qt_lib")
+          done
+          "$qt_bin/macdeployqt" "$bundle" "${deploy_args[@]}"
+          test -f "$bundle/Contents/PlugIns/platforms/libqcocoa.dylib"
+
+          # Some transitive Homebrew references survive deployment even when
+          # their libraries were copied. Repair only references with an existing
+          # bundle counterpart; never leave a dependency on the build machine.
+          while IFS= read -r -d '' binary; do
+            file_type="$(file -b "$binary")"
+            [[ "$file_type" == *Mach-O* ]] || continue
+            dependencies="$(otool -L "$binary")"
+            install_id="$(otool -D "$binary" | tail -n +2)"
+            while IFS= read -r dependency; do
+              case "$dependency" in
+                "$brew_prefix"/*|@rpath/*)
+                  case "$dependency" in
+                    @rpath/*) relative="${dependency#@rpath/}" ;;
+                    *.framework/*) relative="${dependency#*/lib/}" ;;
+                    *) relative="${dependency##*/}" ;;
+                  esac
+                  target="$bundle/Contents/Frameworks/$relative"
+                  if [ ! -f "$target" ]; then
+                    echo "Missing bundled dependency for $binary: $dependency" >&2
+                    exit 1
+                  fi
+                  replacement="@executable_path/../Frameworks/$relative"
+                  if [ "$dependency" = "$install_id" ]; then
+                    install_name_tool -id "$replacement" "$binary"
+                  else
+                    install_name_tool -change "$dependency" "$replacement" "$binary"
+                  fi
+                  ;;
+              esac
+            done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
+          done < <(find "$bundle" -type f -print0)
+
+          # Signing does not check library availability. Reject missing
+          # bundle-relative dependencies as well as build-host references.
+          while IFS= read -r -d '' binary; do
+            file_type="$(file -b "$binary")"
+            [[ "$file_type" == *Mach-O* ]] || continue
+            dependencies="$(otool -L "$binary")"
+            while IFS= read -r dependency; do
+              case "$dependency" in
+                /System/Library/*|/usr/lib/*) continue ;;
+                @executable_path/*)
+                  target="$bundle/Contents/MacOS/${dependency#@executable_path/}" ;;
+                @loader_path/*)
+                  target="${binary%/*}/${dependency#@loader_path/}" ;;
+                *)
+                  echo "Unbundled dependency in $binary: $dependency" >&2
+                  exit 1 ;;
+              esac
+              if [ ! -f "$target" ]; then
+                echo "Missing bundled dependency for $binary: $dependency" >&2
+                exit 1
+              fi
+            done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
+          done < <(find "$bundle" -type f -print0)
+          # All binary edits must precede signing. Deep signing is intentional
+          # for this ad-hoc beta bundle, not a Developer ID/notarization workflow.
+          codesign --force --deep --sign - "$bundle"
+          codesign --verify --deep --strict --verbose=2 "$bundle"
+          dmg_stage="$(mktemp -d "$RUNNER_TEMP/qnetstats-dmg.XXXXXX")"
+          ditto "$bundle" "$dmg_stage/$bundle"
+          ln -s /Applications "$dmg_stage/Applications"
+          hdiutil create -volname "QNetStats" -srcfolder "$dmg_stage" \
+            -format UDZO "QNetStats.dmg"
+          hdiutil verify "QNetStats.dmg"
+          mkdir -p package
+          mv QNetStats.dmg "package/QNetStats-macOS-${{ matrix.arch }}-Qt${{ matrix.qt }}.dmg"
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: QNetStats-macOS-${{ matrix.arch }}-Qt${{ matrix.qt }}-${{ github.sha }}
+          path: build/package/*.dmg
           if-no-files-found: error
           retention-days: 14

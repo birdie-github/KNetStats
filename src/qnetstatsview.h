@@ -62,7 +62,7 @@ signals:
 
 private:
 	QNetStats *mParent;
-#ifndef Q_OS_WIN
+#ifdef Q_OS_LINUX
 	QString mSysDevPath;            // Path to the Linux device.
 #endif
 	bool mCarrier;                    // Interface carrier is on?
@@ -87,7 +87,7 @@ private:
 	quint64 readInterfaceIdentity() const;
 	bool readInterfaceCounters(unsigned long long &brx, unsigned long long &btx,
 							   unsigned long long &prx, unsigned long long &ptx) const;
-#ifndef Q_OS_WIN
+#ifdef Q_OS_LINUX
 	bool readInterfaceNumValue(const char *name, unsigned long long &value) const;
 #endif
 
