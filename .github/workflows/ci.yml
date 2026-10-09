@@ -84,49 +84,35 @@ jobs:
           retention-days: 14
 
   macos:
-    name: macOS ${{ matrix.arch }} (Qt ${{ matrix.qt }})
-    runs-on: ${{ matrix.runner }}
+    name: macOS Apple Silicon package (Qt 6)
+    runs-on: macos-15
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        qt: ['5', '6']
-        arch: [arm64, x86_64]
-        include:
-          - arch: arm64
-            runner: macos-15
-          - arch: x86_64
-            runner: macos-15-intel
-          - qt: '5'
-            formula: qt@5
-          - qt: '6'
-            formula: qt
     steps:
       - uses: actions/checkout@v4
       - name: Install macOS build dependencies
-        run: brew install cmake ninja "${{ matrix.formula }}"
+        run: brew install cmake ninja qt
 
       - name: Build QNetStats
         run: |
           set -euo pipefail
-          qt_prefix="$(brew --prefix "${{ matrix.formula }}")"
+          qt_prefix="$(brew --prefix qt)"
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DUSE_QT=${{ matrix.qt }} -DCMAKE_PREFIX_PATH="$qt_prefix" \
-            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+            -DUSE_QT=6 -DCMAKE_PREFIX_PATH="$qt_prefix" \
+            -DCMAKE_OSX_ARCHITECTURES=arm64
           cmake --build build --parallel 3
 
       - name: Deploy, sign and package macOS app
         shell: bash
         run: |
           set -euo pipefail
-          qt_prefix="$(brew --prefix "${{ matrix.formula }}")"
+          qt_prefix="$(brew --prefix qt)"
           qt_bin="$qt_prefix/bin"
           export PATH="$qt_bin:$PATH"
           cd build
           bundle=QNetStats.app
           test -d "$bundle"
-          test "$(uname -m)" = "${{ matrix.arch }}"
-          lipo "$bundle/Contents/MacOS/QNetStats" -verify_arch "${{ matrix.arch }}"
+          test "$(uname -m)" = "arm64"
+          lipo "$bundle/Contents/MacOS/QNetStats" -verify_arch "arm64"
           cp ../COPYING "$bundle/Contents/Resources/LICENSE.txt"
 
           # Stage the plugin types used by this Widgets application. Keep all
@@ -227,12 +213,12 @@ jobs:
             -format UDZO "QNetStats.dmg"
           hdiutil verify "QNetStats.dmg"
           mkdir -p package
-          mv QNetStats.dmg "package/QNetStats-macOS-${{ matrix.arch }}-Qt${{ matrix.qt }}.dmg"
+          mv QNetStats.dmg "package/QNetStats-macOS-arm64-Qt6.dmg"
 
       - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
-          name: QNetStats-macOS-${{ matrix.arch }}-Qt${{ matrix.qt }}-${{ github.sha }}
+          name: QNetStats-macOS-arm64-Qt6-${{ github.sha }}
           path: build/package/*.dmg
           if-no-files-found: error
           retention-days: 14

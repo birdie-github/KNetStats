@@ -153,8 +153,8 @@ codesign --force --deep --sign - build/QNetStats.app
 
 `cmake --install build --prefix /Applications` installs the app bundle.
 Deploy Qt before installing if the app must run without the build machine's Qt.
-CI builds and packages Qt5 and Qt6 bundles in DMG images separately for arm64
-and x86_64. It checks bundled dependencies and signatures before packaging.
+CI builds and packages an Apple Silicon (arm64) Qt6 bundle in a DMG image.
+It checks bundled dependencies and signatures before packaging.
 These packages are ad-hoc signed, without Developer ID signing or notarization;
 Gatekeeper may require approval when opening a downloaded app.
 

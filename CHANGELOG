@@ -1,5 +1,5 @@
 Version 2.2.0 (not yet released)
-- Added macOS support with native 64-bit counters, menu-bar controls, and Qt5/Qt6 DMG CI builds for Apple Silicon and Intel.
+- Added macOS support with native 64-bit counters, menu-bar controls, and Qt6 DMG CI builds for Apple Silicon.
 
 Version 2.1.0
 - Implement smooth traffic chart scrolling
