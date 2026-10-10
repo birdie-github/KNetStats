@@ -73,8 +73,8 @@ options follow the application's defaults, including future default changes.
 
 ## Screenshots:
 
-![Statistics Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/StatisticsWindow.png)
-![Configure Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/ConfigureWindow.png)
+![Statistics Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/qnetstats-chart.webp)
+![Configure Window](https://raw.githubusercontent.com/birdie-github/QNetStats/main/.github/screenshots/qnetstats-configuration.webp)
 
 <p>
   Preview of tray icons with different themes:
